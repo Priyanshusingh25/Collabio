@@ -1,0 +1,21 @@
+{
+  "name": "collabio",
+  "version": "1.0.0",
+  "description": "Personal deal manager for creators",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "npm --prefix client run dev",
+    "install:all": "npm install && npm --prefix client install"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "sqlite3": "^5.1.7",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
