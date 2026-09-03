@@ -30,9 +30,38 @@ app.use('/api/invoices', invoicesRouter);
 app.use('/api/notes', notesRouter);
 app.use('/api/settings', settingsRouter);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', app: 'Collabio API', version: '1.0.0' });
+// Health check & System Diagnostics
+app.get('/api/health', async (req, res) => {
+  try {
+    const { get } = require('./db/database');
+    const userCount = await get('SELECT COUNT(*) as count FROM users');
+    const dealCount = await get('SELECT COUNT(*) as count FROM deals');
+    const brandCount = await get('SELECT COUNT(*) as count FROM brands');
+    const invoiceCount = await get('SELECT COUNT(*) as count FROM invoices');
+
+    res.json({
+      status: 'ok',
+      app: 'Collabio API',
+      version: '1.0.0',
+      database: {
+        engine: 'SQLite 3',
+        mode: 'WAL (Write-Ahead Logging)',
+        status: 'connected',
+        file: 'server/db/collabio.db',
+        persistent: true,
+        counts: {
+          users: userCount?.count || 0,
+          deals: dealCount?.count || 0,
+          brands: brandCount?.count || 0,
+          invoices: invoiceCount?.count || 0,
+        }
+      },
+      uptime: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
 });
 
 // 404 handler
@@ -46,16 +75,18 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server after DB init
-initializeDatabase()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 Collabio API running at http://localhost:${PORT}`);
+// Start server after DB init if executed directly
+if (require.main === module) {
+  initializeDatabase()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`🚀 Collabio API running at http://localhost:${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('Failed to initialize database:', err);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.error('Failed to initialize database:', err);
-    process.exit(1);
-  });
+}
 
 module.exports = app;

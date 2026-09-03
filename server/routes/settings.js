@@ -44,4 +44,37 @@ router.put('/', requireAuth, async (req, res) => {
   }
 });
 
+// GET export all workspace data for backup
+router.get('/export', requireAuth, async (req, res) => {
+  try {
+    const { all } = require('../db/database');
+    const user = await get('SELECT id, username, email, display_name, avatar_emoji, created_at FROM users WHERE id = ?', [req.userId]);
+    const settings = await get('SELECT * FROM user_settings WHERE user_id = ?', [req.userId]);
+    const deals = await all('SELECT * FROM deals WHERE user_id = ? ORDER BY created_at DESC', [req.userId]);
+    const brands = await all('SELECT * FROM brands WHERE user_id = ? ORDER BY created_at DESC', [req.userId]);
+    const contacts = await all('SELECT * FROM contacts WHERE user_id = ? ORDER BY created_at DESC', [req.userId]);
+    const services = await all('SELECT * FROM services WHERE user_id = ? ORDER BY created_at DESC', [req.userId]);
+    const invoices = await all('SELECT * FROM invoices WHERE user_id = ? ORDER BY created_at DESC', [req.userId]);
+    const notes = await all('SELECT * FROM quick_notes WHERE user_id = ? ORDER BY created_at DESC', [req.userId]);
+
+    res.json({
+      exported_at: new Date().toISOString(),
+      app: 'Collabio Deal Manager',
+      database: 'SQLite 3 (WAL Mode)',
+      user,
+      settings,
+      data: {
+        deals,
+        brands,
+        contacts,
+        services,
+        invoices,
+        notes
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

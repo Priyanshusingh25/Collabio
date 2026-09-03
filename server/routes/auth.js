@@ -58,6 +58,23 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// 1-Click Demo Login
+router.post('/demo', async (req, res) => {
+  try {
+    let user = await get('SELECT * FROM users WHERE email = ?', ['demo@collabio.app']);
+    if (!user) {
+      const { seedDemoUserIfMissing } = require('../db/database');
+      const userId = await seedDemoUserIfMissing();
+      user = await get('SELECT * FROM users WHERE id = ?', [userId]);
+    }
+    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+    const { password_hash, ...safeUser } = user;
+    res.json({ token, user: safeUser });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get current user
 router.get('/me', requireAuth, async (req, res) => {
   try {

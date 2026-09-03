@@ -79,5 +79,15 @@ export const notesApi = {
 export const settingsApi = {
   get: (token) => request(`${API}/settings`, {}, token),
   update: (token, data) => request(`${API}/settings`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  exportData: (token) => request(`${API}/settings/export`, {}, token),
 };
+
+// Health & System Info
+export const healthApi = {
+  check: async () => {
+    const res = await fetch(`${API}/health`);
+    return res.json();
+  }
+};
+
 

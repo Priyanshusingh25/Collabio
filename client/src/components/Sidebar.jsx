@@ -76,6 +76,27 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
+        <div
+          title="Connected to SQLite Local Database (server/db/collabio.db)"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            padding: '6px 10px',
+            marginBottom: 10,
+            background: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            borderRadius: 8,
+            fontSize: 11,
+            color: '#10b981',
+            cursor: 'default'
+          }}
+        >
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
+          <span style={{ fontWeight: 600 }}>SQLite 3 Connected</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.8, background: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: 4 }}>WAL</span>
+        </div>
+
         <div className="sidebar-user">
           <div className="user-avatar">{user?.avatar_emoji || '🎬'}</div>
           <div className="user-info">

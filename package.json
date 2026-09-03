@@ -4,7 +4,7 @@
   "description": "Personal deal manager for creators",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "node server/index.js",
+    "server": "node --watch server/index.js",
     "client": "npm --prefix client run dev",
     "install:all": "npm install && npm --prefix client install"
   },

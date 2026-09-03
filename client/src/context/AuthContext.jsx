@@ -12,15 +12,26 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (token) {
       fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.ok ? r.json() : null)
-        .then(u => { setUser(u); setLoading(false); })
-        .catch(() => { setLoading(false); });
+        .then(r => {
+          if (r.ok) return r.json();
+          // Invalidate stale or invalid token
+          localStorage.removeItem('collabio_token');
+          setToken(null);
+          return null;
+        })
+        .then(u => {
+          setUser(u);
+          setLoading(false);
+        })
+        .catch(() => {
+          setLoading(false);
+        });
     } else {
       setLoading(false);
     }
   }, [token]);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, remember = true) => {
     const r = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -28,6 +39,27 @@ export function AuthProvider({ children }) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Login failed');
+    
+    localStorage.setItem('collabio_token', data.token);
+    if (remember) {
+      localStorage.setItem('collabio_remembered_email', email);
+    } else {
+      localStorage.removeItem('collabio_remembered_email');
+    }
+
+    setToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, []);
+
+  const loginAsDemo = useCallback(async () => {
+    const r = await fetch(`${API}/auth/demo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Demo login failed');
+
     localStorage.setItem('collabio_token', data.token);
     setToken(data.token);
     setUser(data.user);
@@ -42,7 +74,9 @@ export function AuthProvider({ children }) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Registration failed');
+
     localStorage.setItem('collabio_token', data.token);
+    localStorage.setItem('collabio_remembered_email', email);
     setToken(data.token);
     setUser(data.user);
     return data.user;
@@ -55,7 +89,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginAsDemo, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
