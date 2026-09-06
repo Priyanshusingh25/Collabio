@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, X, Trash2, Pin } from 'lucide-react';
+import { Plus, X, Trash2, Pin, StickyNote, Sparkles } from 'lucide-react';
 import { notesApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatDate } from '../utils/helpers';
 
 const COLORS = {
-  blue: '#3b82f6',
   purple: '#8b5cf6',
+  cyan: '#06b6d4',
   green: '#10b981',
   yellow: '#f59e0b',
-  red: '#ef4444',
+  rose: '#f43f5e',
+  blue: '#3b82f6',
   gray: '#6b7280'
 };
 
@@ -54,6 +55,7 @@ export default function Notes() {
         const next = prev.map(n => n.id === note.id ? updated : n);
         return next.sort((a, b) => b.is_pinned - a.is_pinned || new Date(b.created_at) - new Date(a.created_at));
       });
+      addToast(note.is_pinned ? 'Unpinned note' : 'Pinned note to top 📌');
     } catch (err) {
       addToast(err.message, 'error');
     }
@@ -61,10 +63,16 @@ export default function Notes() {
 
   return (
     <div>
+      {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Quick Notes 📝</h1>
-          <p className="page-subtitle">Scratch pad for ideas and meeting notes</p>
+          <h1 className="page-title">
+            <span>Sponsorship Pitch & Quick Notes</span>
+            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: 'rgba(139, 92, 246, 0.12)', color: '#c084fc', padding: '3px 10px', borderRadius: 20 }}>
+              {notes.length} Notes
+            </span>
+          </h1>
+          <p className="page-subtitle">Scratchpad for pitch templates, rate calculations, audience stats, and brand negotiations</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setEditItem(null); setShowModal(true); }}>
           <Plus size={16} /> Add Note
@@ -73,50 +81,113 @@ export default function Notes() {
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40vh' }}>
-          <div className="spinner" style={{ width: 32, height: 32 }} />
+          <div className="spinner" style={{ width: 36, height: 36 }} />
         </div>
       ) : notes.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">📝</div>
-          <div className="empty-state-title">No notes yet</div>
-          <button className="btn btn-primary mt-4" onClick={() => setShowModal(true)}><Plus size={15} /> Create Note</button>
+          <div className="empty-state-title">No pitch notes created yet</div>
+          <div className="empty-state-text">Keep your sponsorship templates, talking points, and rate cards handy.</div>
+          <button className="btn btn-primary mt-4" onClick={() => setShowModal(true)}>
+            <Plus size={15} /> Create Note
+          </button>
         </div>
       ) : (
-        <div className="grid-4" style={{ gridAutoRows: 'max-content' }}>
-          {notes.map(note => (
-            <div 
-              key={note.id} 
-              className="card" 
-              onClick={() => { setEditItem(note); setShowModal(true); }}
-              style={{ 
-                cursor: 'pointer', 
-                borderTop: `4px solid ${COLORS[note.color] || COLORS.blue}`,
-                display: 'flex', flexDirection: 'column' 
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, paddingRight: 24 }}>{note.title || 'Untitled Note'}</h3>
-                <div style={{ display: 'flex', gap: 4, position: 'absolute', top: 12, right: 12 }}>
-                  <button 
-                    className="btn btn-ghost btn-sm btn-icon" 
-                    onClick={(e) => togglePin(e, note)}
-                    style={{ color: note.is_pinned ? 'var(--accent-1)' : 'var(--text-muted)' }}
-                  >
-                    <Pin size={14} fill={note.is_pinned ? 'currentColor' : 'none'} />
-                  </button>
-                  <button className="btn btn-ghost btn-sm btn-icon" style={{ color: '#ef4444' }} onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }}>
-                    <Trash2 size={14} />
-                  </button>
+        <div className="grid-3" style={{ gridAutoRows: 'max-content' }}>
+          {notes.map(note => {
+            const cardColor = COLORS[note.color] || COLORS.purple;
+            return (
+              <div 
+                key={note.id} 
+                className="card" 
+                onClick={() => { setEditItem(note); setShowModal(true); }}
+                style={{ 
+                  cursor: 'pointer', 
+                  borderTop: `3px solid ${cardColor}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  position: 'relative',
+                  transition: 'var(--transition-spring)',
+                  background: note.is_pinned ? 'rgba(20, 24, 40, 0.95)' : 'var(--color-surface)',
+                  borderColor: note.is_pinned ? 'rgba(139, 92, 246, 0.35)' : undefined
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+                  e.currentTarget.style.borderColor = cardColor;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.borderColor = note.is_pinned ? 'rgba(139, 92, 246, 0.35)' : 'var(--color-border)';
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <div style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    paddingRight: 40
+                  }}>
+                    {note.title || 'Untitled Note'}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 4, position: 'absolute', top: 16, right: 16 }}>
+                    <button 
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon" 
+                      onClick={(e) => togglePin(e, note)}
+                      title={note.is_pinned ? 'Unpin' : 'Pin to top'}
+                      style={{ color: note.is_pinned ? 'var(--accent-1)' : 'var(--text-muted)' }}
+                    >
+                      <Pin size={14} fill={note.is_pinned ? 'currentColor' : 'none'} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon" 
+                      style={{ color: '#f43f5e' }} 
+                      onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }}
+                      title="Delete note"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{
+                  fontSize: 13,
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'pre-wrap',
+                  marginBottom: 16,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 7,
+                  WebkitBoxOrient: 'vertical',
+                  lineHeight: 1.55
+                }}>
+                  {note.content}
+                </div>
+
+                <div style={{
+                  marginTop: 'auto',
+                  fontSize: 11,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: 10,
+                  borderTop: '1px solid var(--color-border)'
+                }}>
+                  <span>{formatDate(note.updated_at || note.created_at)}</span>
+                  {note.is_pinned ? (
+                    <span style={{ color: 'var(--accent-1)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Pin size={11} fill="currentColor" /> Pinned
+                    </span>
+                  ) : null}
                 </div>
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', marginBottom: 16, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 6, WebkitBoxOrient: 'vertical' }}>
-                {note.content}
-              </div>
-              <div style={{ marginTop: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
-                {formatDate(note.updated_at)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -141,7 +212,7 @@ function NoteModal({ note, onClose, onSaved }) {
   const { token } = useAuth();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState(note || { title: '', content: '', color: 'blue', is_pinned: 0 });
+  const [form, setForm] = useState(note || { title: '', content: '', color: 'purple', is_pinned: 0 });
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -152,7 +223,7 @@ function NoteModal({ note, onClose, onSaved }) {
       const res = note
         ? await notesApi.update(token, note.id, form)
         : await notesApi.create(token, form);
-      addToast(note ? 'Note updated' : 'Note created');
+      addToast(note ? 'Note updated!' : 'Note created! ✨');
       onSaved(res);
       onClose();
     } catch (err) {
@@ -166,34 +237,65 @@ function NoteModal({ note, onClose, onSaved }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">{note ? 'Edit Note' : 'New Note'}</div>
+          <div className="modal-title">{note ? 'Edit Note' : '📝 New Pitch Note'}</div>
           <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <input 
               className="form-input" 
-              style={{ fontSize: 18, fontWeight: 700, background: 'transparent', border: 'none', padding: 0, marginBottom: 16, boxShadow: 'none' }}
-              value={form.title} onChange={e => set('title', e.target.value)} placeholder="Note Title" autoFocus
-            />
-            <textarea 
-              className="form-textarea" 
-              style={{ minHeight: 200, background: 'var(--color-surface-2)', border: 'none' }}
-              value={form.content} onChange={e => set('content', e.target.value)} placeholder="Start typing..." required
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 20,
+                fontWeight: 800,
+                background: 'transparent',
+                border: 'none',
+                padding: '0 0 12px 0',
+                marginBottom: 12,
+                borderBottom: '1px solid var(--color-border)',
+                borderRadius: 0
+              }}
+              value={form.title} 
+              onChange={e => set('title', e.target.value)} 
+              placeholder="Note Title or Sponsor Name..." 
+              autoFocus
             />
             
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              {Object.keys(COLORS).map(c => (
-                <div 
-                  key={c}
-                  onClick={() => set('color', c)}
-                  style={{ 
-                    width: 24, height: 24, borderRadius: '50%', background: COLORS[c], cursor: 'pointer',
-                    border: form.color === c ? '2px solid white' : '2px solid transparent',
-                    boxShadow: form.color === c ? `0 0 0 2px ${COLORS[c]}` : 'none'
-                  }}
-                />
-              ))}
+            <textarea 
+              className="form-textarea" 
+              style={{
+                minHeight: 200,
+                background: 'var(--color-surface-2)',
+                border: '1px solid var(--color-border)',
+                fontSize: 14,
+                lineHeight: 1.6
+              }}
+              value={form.content} 
+              onChange={e => set('content', e.target.value)} 
+              placeholder="Start drafting pitch copy, rate breakdown, or talking points..." 
+              required
+            />
+            
+            <div style={{ marginTop: 18 }}>
+              <div className="form-label" style={{ marginBottom: 8 }}>Accent Tag Color</div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {Object.keys(COLORS).map(c => (
+                  <div 
+                    key={c}
+                    onClick={() => set('color', c)}
+                    style={{ 
+                      width: 26,
+                      height: 26,
+                      borderRadius: '50%',
+                      background: COLORS[c],
+                      cursor: 'pointer',
+                      border: form.color === c ? '2px solid #ffffff' : '2px solid transparent',
+                      boxShadow: form.color === c ? `0 0 12px ${COLORS[c]}` : 'none',
+                      transition: 'var(--transition-fast)'
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           <div className="modal-footer">

@@ -34,11 +34,16 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">🤝</div>
-        <span className="sidebar-logo-text">Collabio</span>
+        <div>
+          <span className="sidebar-logo-text">Collabio</span>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--accent-1)', letterSpacing: '0.05em', fontWeight: 600 }}>
+            STUDIO OS
+          </div>
+        </div>
       </div>
 
       <nav className="sidebar-nav">
-        <div className="sidebar-section-label">Main</div>
+        <div className="sidebar-section-label">Command</div>
         {navMain.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -62,7 +67,7 @@ export default function Sidebar() {
           </NavLink>
         ))}
 
-        <div className="sidebar-section-label">Tools</div>
+        <div className="sidebar-section-label">Intelligence</div>
         {navTools.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -77,37 +82,27 @@ export default function Sidebar() {
 
       <div className="sidebar-footer">
         <div
-          title="Connected to SQLite Local Database (server/db/collabio.db)"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            padding: '6px 10px',
-            marginBottom: 10,
-            background: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.2)',
-            borderRadius: 8,
-            fontSize: 11,
-            color: '#10b981',
-            cursor: 'default'
-          }}
+          className="db-status-pill"
+          title="Persistent Local SQLite 3 Database (server/db/collabio.db) in WAL High-Concurrency Mode"
         >
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
-          <span style={{ fontWeight: 600 }}>SQLite 3 Connected</span>
-          <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.8, background: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: 4 }}>WAL</span>
+          <div className="db-beacon" />
+          <span style={{ fontSize: 11 }}>SQLite 3 WAL Engine</span>
+          <span style={{ marginLeft: 'auto', fontSize: 9.5, opacity: 0.85, background: 'rgba(16, 185, 129, 0.2)', padding: '1px 5px', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>
+            ACTIVE
+          </span>
         </div>
 
         <div className="sidebar-user">
           <div className="user-avatar">{user?.avatar_emoji || '🎬'}</div>
           <div className="user-info">
             <div className="user-name">{user?.display_name || user?.username || 'Creator'}</div>
-            <div className="user-role">Creator</div>
+            <div className="user-role">Creator Pro</div>
           </div>
           <button
             onClick={handleLogout}
             className="btn btn-ghost btn-icon"
-            title="Logout"
-            style={{ padding: '6px', marginLeft: '2px' }}
+            title="Sign Out"
+            style={{ padding: '6px' }}
           >
             <LogOut size={15} />
           </button>

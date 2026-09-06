@@ -1,22 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   LineChart, Line, CartesianGrid, Legend
 } from 'recharts';
+import { BarChart3, TrendingUp, DollarSign, Calendar, Zap, PieChart } from 'lucide-react';
 import { statsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, getPlatform, getStatus } from '../utils/helpers';
 
-const COLORS = ['#7c3aed', '#a855f7', '#ec4899', '#60a5fa', '#10b981', '#f59e0b'];
+const COLORS = ['#8b5cf6', '#06b6d4', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
     return (
-      <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
-        <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
+      <div style={{
+        background: 'rgba(20, 23, 38, 0.95)',
+        backdropFilter: 'blur(16px)',
+        border: '1px solid rgba(139, 92, 246, 0.35)',
+        borderRadius: 10,
+        padding: '10px 14px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+      }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
         {payload.map((p, i) => (
-          <div key={i} style={{ color: p.color, fontWeight: 700 }}>
+          <div key={i} style={{ color: p.color || '#ffffff', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: 15 }}>
             {typeof p.value === 'number' && p.value > 100 ? formatCurrency(p.value) : p.value}
           </div>
         ))}
@@ -33,12 +40,12 @@ export default function Analytics() {
 
   useEffect(() => {
     statsApi.getOverview(token).then(s => { setStats(s); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-        <div className="spinner" style={{ width: 32, height: 32 }} />
+        <div className="spinner" style={{ width: 36, height: 36 }} />
       </div>
     );
   }
@@ -52,6 +59,7 @@ export default function Analytics() {
 
   const statusData = (stats?.byStatus || []).map(s => ({
     name: getStatus(s.status).label,
+    statusKey: s.status,
     count: s.count,
     value: s.value,
   }));
@@ -63,41 +71,60 @@ export default function Analytics() {
 
   return (
     <div>
+      {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Analytics 📈</h1>
-          <p className="page-subtitle">Deep dive into your creator business performance</p>
+          <h1 className="page-title">
+            <span>Creator Analytics</span>
+            <span style={{ fontSize: 18, color: 'var(--accent-1)' }}>📈</span>
+          </h1>
+          <p className="page-subtitle">Deep intelligence into your sponsorship earnings, platform distribution, and deal conversion rates</p>
         </div>
       </div>
 
-      {/* Top stats */}
+      {/* Top Stat Metrics */}
       <div className="grid-4 mb-8">
         {[
-          { label: 'Total Earned', value: formatCurrency(stats?.totalEarned), emoji: '💰' },
-          { label: 'This Year', value: formatCurrency(stats?.thisYear), emoji: '📅' },
-          { label: 'This Month', value: formatCurrency(stats?.thisMonth), emoji: '🗓️' },
-          { label: 'Pipeline', value: formatCurrency(stats?.pipelineValue), emoji: '🚀' },
-        ].map(s => (
-          <div key={s.label} className="stat-card" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>{s.emoji}</div>
-            <div className="stat-label">{s.label}</div>
-            <div className="stat-value accent" style={{ fontSize: 22 }}>{s.value}</div>
-          </div>
-        ))}
+          { label: 'Total Earned', value: formatCurrency(stats?.totalEarned), sub: 'All-time payouts', icon: DollarSign, color: '#10b981' },
+          { label: 'This Year (2026)', value: formatCurrency(stats?.thisYear), sub: 'Annual trajectory', icon: Calendar, color: '#8b5cf6' },
+          { label: 'Current Month', value: formatCurrency(stats?.thisMonth), sub: 'Monthly recurring', icon: Zap, color: '#06b6d4' },
+          { label: 'Pipeline Value', value: formatCurrency(stats?.pipelineValue), sub: 'Active integrations', icon: TrendingUp, color: '#ec4899' },
+        ].map(s => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="stat-card">
+              <div className="stat-icon" style={{ color: s.color }}><Icon size={22} /></div>
+              <div className="stat-label">{s.label}</div>
+              <div className="stat-value accent" style={{ fontSize: 26 }}>{s.value}</div>
+              <div className="stat-change">{s.sub}</div>
+            </div>
+          );
+        })}
       </div>
 
+      {/* Charts Grid */}
       <div className="grid-2 mb-8">
-        {/* Revenue over time */}
+        {/* Revenue Over Time */}
         <div className="chart-card">
-          <div className="chart-title">📊 Revenue Over Time</div>
+          <div className="chart-title">
+            <TrendingUp size={16} color="var(--accent-1)" />
+            <span>Revenue Growth Over Time</span>
+          </div>
           {monthlyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={monthlyData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="month" tick={{ fill: '#535869', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#535869', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={monthlyData} margin={{ top: 10, right: 10, bottom: 5, left: -15 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
+                <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="earned" stroke="#a855f7" strokeWidth={2.5} dot={{ fill: '#7c3aed', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="earned" 
+                  stroke="#a855f7" 
+                  strokeWidth={3} 
+                  dot={{ fill: '#8b5cf6', strokeWidth: 2, stroke: '#ffffff', r: 4 }} 
+                  activeDot={{ r: 7, fill: '#ec4899', stroke: '#ffffff', strokeWidth: 3 }} 
+                />
               </LineChart>
             </ResponsiveContainer>
           ) : <EmptyChart />}
@@ -105,57 +132,75 @@ export default function Analytics() {
 
         {/* Value by Platform */}
         <div className="chart-card">
-          <div className="chart-title">💸 Value by Platform</div>
+          <div className="chart-title">
+            <BarChart3 size={16} color="#06b6d4" />
+            <span>Value by Content Platform</span>
+          </div>
           {platformValueData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={platformValueData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
-                <XAxis dataKey="name" tick={{ fill: '#535869', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#535869', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={platformValueData} margin={{ top: 10, right: 10, bottom: 5, left: -15 }}>
+                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="#7c3aed">
-                  {platformValueData.map((d, i) => (
-                    <rect key={i} fill={d.fill} />
-                  ))}
-                </Bar>
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="#8b5cf6" />
               </BarChart>
             </ResponsiveContainer>
           ) : <EmptyChart />}
         </div>
       </div>
 
-      {/* Pipeline breakdown table */}
+      {/* Pipeline Breakdown Table */}
       <div className="chart-card">
-        <div className="chart-title">🔄 Deal Pipeline Breakdown</div>
-        <div className="table-wrap" style={{ marginTop: 12 }}>
+        <div className="chart-title">
+          <Zap size={16} color="var(--accent-1)" />
+          <span>Deal Pipeline Stage Conversion Breakdown</span>
+        </div>
+        <div className="table-wrap" style={{ marginTop: 16 }}>
           <table className="table">
             <thead>
               <tr>
-                <th>Stage</th>
-                <th>Deals</th>
-                <th>Total Value</th>
-                <th>Avg per Deal</th>
-                <th>% of Pipeline</th>
+                <th>Deal Stage</th>
+                <th>Volume</th>
+                <th>Cumulative Value</th>
+                <th>Average per Deal</th>
+                <th>Pipeline Share</th>
               </tr>
             </thead>
             <tbody>
               {statusData.map(s => {
                 const total = statusData.reduce((sum, x) => sum + x.value, 0);
                 const pct = total > 0 ? ((s.value / total) * 100).toFixed(1) : 0;
-                const st = getStatus(s.name.toLowerCase().replace(' ', '_'));
+                const st = getStatus(s.statusKey);
                 return (
                   <tr key={s.name}>
                     <td>
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{s.name}</span>
-                    </td>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{s.count}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(s.value)}</td>
-                    <td>{s.count > 0 ? formatCurrency(s.value / s.count) : '—'}</td>
-                    <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ flex: 1, height: 4, background: 'var(--color-surface-3)', borderRadius: 99, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent-gradient)', borderRadius: 99 }} />
+                        <span>{st.emoji}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{s.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                      {s.count} deal{s.count !== 1 ? 's' : ''}
+                    </td>
+                    <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: st.color }}>
+                      {formatCurrency(s.value)}
+                    </td>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                      {s.count > 0 ? formatCurrency(s.value / s.count) : '—'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ flex: 1, height: 6, background: 'var(--color-surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+                          <div style={{
+                            width: `${pct}%`,
+                            height: '100%',
+                            background: 'var(--accent-gradient)',
+                            borderRadius: 99
+                          }} />
                         </div>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 32 }}>{pct}%</span>
+                        <span style={{ fontSize: 11.5, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', minWidth: 40, textAlign: 'right' }}>
+                          {pct}%
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -171,8 +216,8 @@ export default function Analytics() {
 
 function EmptyChart() {
   return (
-    <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-      Not enough data yet
+    <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+      Not enough historical deal data yet
     </div>
   );
 }

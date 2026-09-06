@@ -1,8 +1,13 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ToastProvider } from './context/ToastContext';
+import { ToastProvider, useToast } from './context/ToastContext';
 import Sidebar from './components/Sidebar';
+import TopHeader from './components/TopHeader';
+import CommandPalette from './components/CommandPalette';
+import NewDealModal from './components/NewDealModal';
+import { brandsApi } from './api';
+
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Pipeline from './pages/Pipeline';
@@ -15,14 +20,38 @@ import Notes from './pages/Notes';
 import Settings from './pages/Settings';
 
 function ProtectedLayout({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, token } = useAuth();
+  const { addToast } = useToast();
+  const navigate = useNavigate();
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [newDealOpen, setNewDealOpen] = useState(false);
+  const [brands, setBrands] = useState([]);
+
+  // Load brands for global deal modal
+  useEffect(() => {
+    if (token && newDealOpen && brands.length === 0) {
+      brandsApi.getAll(token).then(b => setBrands(b)).catch(() => {});
+    }
+  }, [token, newDealOpen, brands.length]);
+
+  // Global keyboard shortcut: Cmd+K or Ctrl+K
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setCommandOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-bg)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🤝</div>
-          <div className="spinner" style={{ width: 28, height: 28, margin: '0 auto' }} />
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🤝</div>
+          <div className="spinner" style={{ width: 32, height: 32, margin: '0 auto' }} />
         </div>
       </div>
     );
@@ -33,7 +62,31 @@ function ProtectedLayout({ children }) {
   return (
     <div className="app-layout">
       <Sidebar />
-      <main className="main-content">{children}</main>
+      <div className="main-wrapper">
+        <TopHeader
+          onOpenCommand={() => setCommandOpen(true)}
+          onOpenNewDeal={() => setNewDealOpen(true)}
+        />
+        <main className="main-content">{children}</main>
+      </div>
+
+      <CommandPalette
+        isOpen={commandOpen}
+        onClose={() => setCommandOpen(false)}
+        onOpenNewDeal={() => setNewDealOpen(true)}
+      />
+
+      {newDealOpen && (
+        <NewDealModal
+          brands={brands}
+          onClose={() => setNewDealOpen(false)}
+          onCreated={(deal) => {
+            setNewDealOpen(false);
+            addToast(`Deal "${deal.title}" created!`);
+            navigate('/pipeline');
+          }}
+        />
+      )}
     </div>
   );
 }

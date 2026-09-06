@@ -4,21 +4,32 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { DollarSign, TrendingUp, Clock, AlertCircle, Zap, Plus } from 'lucide-react';
-import { statsApi } from '../api';
+import { 
+  DollarSign, TrendingUp, Clock, AlertCircle, Zap, Plus, 
+  ArrowUpRight, Sparkles, Calendar, ChevronRight
+} from 'lucide-react';
+import { statsApi, brandsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate, getDeadlineStatus, getStatus, getPlatform } from '../utils/helpers';
 import NewDealModal from '../components/NewDealModal';
-import { brandsApi } from '../api';
 
-const PIE_COLORS = ['#7c3aed', '#a855f7', '#ec4899', '#60a5fa', '#10b981', '#f59e0b', '#f97316'];
+const PIE_COLORS = ['#8b5cf6', '#06b6d4', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#f43f5e'];
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
     return (
-      <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
-        <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
-        <div style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCurrency(payload[0].value)}</div>
+      <div style={{
+        background: 'rgba(20, 23, 38, 0.95)',
+        backdropFilter: 'blur(16px)',
+        border: '1px solid rgba(139, 92, 246, 0.35)',
+        borderRadius: 10,
+        padding: '10px 14px',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)'
+      }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
+        <div style={{ color: '#ffffff', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 16 }}>
+          {formatCurrency(payload[0].value)}
+        </div>
       </div>
     );
   }
@@ -50,7 +61,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-        <div className="spinner" style={{ width: 32, height: 32 }} />
+        <div className="spinner" style={{ width: 36, height: 36 }} />
       </div>
     );
   }
@@ -65,104 +76,169 @@ export default function Dashboard() {
     value: p.count,
   }));
 
+  const totalPipelineValue = (stats?.byStatus || []).reduce((sum, s) => sum + (s.value || 0), 0);
+
   return (
     <div>
+      {/* Top Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Dashboard 📊</h1>
-          <p className="page-subtitle">Your creator business at a glance</p>
+          <h1 className="page-title">
+            <span>Dashboard</span>
+            <span style={{ fontSize: 18, color: 'var(--accent-1)', fontWeight: 600, background: 'rgba(139, 92, 246, 0.12)', padding: '2px 10px', borderRadius: 20 }}>
+              Live Overview
+            </span>
+          </h1>
+          <p className="page-subtitle">Creator sponsorship performance, revenue velocity, and deal pipelines</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowNewDeal(true)}>
           <Plus size={16} /> New Deal
         </button>
       </div>
 
-      {/* Stat Cards */}
+      {/* Primary Stat Cards */}
       <div className="grid-4 mb-8">
-        <StatCard
-          icon={<DollarSign size={20} />}
-          label="Total Earned"
-          value={formatCurrency(stats?.totalEarned)}
-          sub="All time"
-          accent
-        />
-        <StatCard
-          icon={<TrendingUp size={20} />}
-          label="Pipeline Value"
-          value={formatCurrency(stats?.pipelineValue)}
-          sub="Active deals"
-        />
-        <StatCard
-          icon={<Clock size={20} />}
-          label="Outstanding"
-          value={formatCurrency(stats?.outstanding)}
-          sub="Awaiting payment"
-        />
-        <StatCard
-          icon={<Zap size={20} />}
-          label="Total Deals"
-          value={stats?.totalDeals ?? 0}
-          sub="All time"
-        />
+        <div className="stat-card">
+          <div className="stat-icon"><DollarSign size={22} /></div>
+          <div className="stat-label">Total Earned</div>
+          <div className="stat-value accent">{formatCurrency(stats?.totalEarned)}</div>
+          <div className="stat-change" style={{ color: '#10b981' }}>
+            <ArrowUpRight size={14} />
+            <span>Lifetime creator payout</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon"><TrendingUp size={22} /></div>
+          <div className="stat-label">Pipeline Value</div>
+          <div className="stat-value">{formatCurrency(stats?.pipelineValue)}</div>
+          <div className="stat-change" style={{ color: '#06b6d4' }}>
+            <span>Active in-flight negotiations</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon"><Clock size={22} /></div>
+          <div className="stat-label">Outstanding Balance</div>
+          <div className="stat-value" style={{ color: '#f59e0b' }}>{formatCurrency(stats?.outstanding)}</div>
+          <div className="stat-change">
+            <span>Invoiced awaiting wire</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon"><Zap size={22} /></div>
+          <div className="stat-label">Total Partnerships</div>
+          <div className="stat-value">{stats?.totalDeals ?? 0}</div>
+          <div className="stat-change">
+            <span>Deals across all stages</span>
+          </div>
+        </div>
       </div>
 
-      {/* Charts row */}
+      {/* Visualizations Grid */}
       <div className="grid-2 mb-8">
-        {/* Monthly Revenue */}
+        {/* Monthly Revenue Velocity */}
         <div className="chart-card">
-          <div className="chart-title">💰 Monthly Revenue</div>
+          <div className="chart-title">
+            <TrendingUp size={16} color="var(--accent-1)" />
+            <span>Monthly Revenue Velocity</span>
+          </div>
           {monthlyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={monthlyData} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+            <ResponsiveContainer width="100%" height={230}>
+              <AreaChart data={monthlyData} margin={{ top: 10, right: 10, bottom: 5, left: -15 }}>
                 <defs>
                   <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.45} />
+                    <stop offset="70%" stopColor="#ec4899" stopOpacity={0.12} />
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="month" tick={{ fill: '#535869', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#535869', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+                <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="value" stroke="#a855f7" strokeWidth={2} fill="url(#revenueGrad)" />
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#a855f7" 
+                  strokeWidth={3} 
+                  fill="url(#revenueGrad)" 
+                  dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#ffffff' }}
+                  activeDot={{ r: 6, fill: '#ec4899', strokeWidth: 3, stroke: '#ffffff' }}
+                />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              No paid deals yet
+            <div style={{ height: 230, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+              No paid deals recorded yet
             </div>
           )}
         </div>
 
-        {/* Platform Breakdown */}
+        {/* Deals by Platform */}
         <div className="chart-card">
-          <div className="chart-title">📱 Deals by Platform</div>
+          <div className="chart-title">
+            <Zap size={16} color="#06b6d4" />
+            <span>Deals by Content Platform</span>
+          </div>
           {platformData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={230}>
               <PieChart>
-                <Pie data={platformData} cx="45%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
+                <Pie 
+                  data={platformData} 
+                  cx="45%" 
+                  cy="50%" 
+                  innerRadius={60} 
+                  outerRadius={90} 
+                  paddingAngle={4} 
+                  dataKey="value"
+                >
                   {platformData.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v) => [`${v} deals`]} contentStyle={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12 }} />
-                <Legend wrapperStyle={{ fontSize: 11, color: 'var(--text-secondary)' }} />
+                <Tooltip 
+                  formatter={(v) => [`${v} deals`]} 
+                  contentStyle={{ 
+                    background: 'rgba(20, 23, 38, 0.95)', 
+                    border: '1px solid rgba(139, 92, 246, 0.3)', 
+                    borderRadius: 8, 
+                    fontSize: 12 
+                  }} 
+                />
+                <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)' }} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              No deals yet
+            <div style={{ height: 230, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+              No deals added yet
             </div>
           )}
         </div>
       </div>
 
-      {/* Bottom row */}
+      {/* Deadlines & Pipeline Summary */}
       <div className="grid-2">
-        {/* Upcoming Deadlines */}
+        {/* Upcoming Deliverable Deadlines */}
         <div className="card">
-          <div className="section-title">⏰ Upcoming Deadlines</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div className="section-title" style={{ marginBottom: 0 }}>
+              <Calendar size={16} color="var(--accent-amber)" />
+              <span>Upcoming Deliverable Deadlines</span>
+            </div>
+            <button 
+              className="btn btn-ghost btn-sm" 
+              onClick={() => navigate('/pipeline')}
+              style={{ fontSize: 12, color: 'var(--accent-1)' }}
+            >
+              View Pipeline <ChevronRight size={13} />
+            </button>
+          </div>
+
           {(stats?.upcoming || []).length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '12px 0' }}>No upcoming deadlines</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '24px 0', textAlign: 'center' }}>
+              No upcoming deadlines scheduled
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {stats.upcoming.map(d => {
@@ -171,13 +247,31 @@ export default function Dashboard() {
                   <div
                     key={d.id}
                     onClick={() => navigate('/pipeline')}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--color-surface-2)', borderRadius: 8, border: '1px solid var(--color-border)', cursor: 'pointer', transition: 'var(--transition)' }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      background: 'var(--color-surface-2)',
+                      borderRadius: 10,
+                      border: '1px solid var(--color-border)',
+                      cursor: 'pointer',
+                      transition: 'var(--transition-fast)'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                      e.currentTarget.style.transform = 'translateX(3px)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--color-border)';
+                      e.currentTarget.style.transform = 'none';
+                    }}
                   >
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{d.brand_name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.platform} · {formatCurrency(d.deal_value)}</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>{d.brand_name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {d.title} • {d.platform} • <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(d.deal_value)}</span>
+                      </div>
                     </div>
                     <span className={`deadline-badge ${dl?.type}`}>{dl?.label}</span>
                   </div>
@@ -187,31 +281,61 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Overdue + Pipeline Summary */}
+        {/* Pipeline Summary & Conversion Funnel */}
         <div className="card">
-          <div className="section-title">📋 Pipeline Summary</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="section-title">
+            <Sparkles size={16} color="var(--accent-1)" />
+            <span>Pipeline Conversion Funnel</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {(stats?.byStatus || []).map(s => {
               const st = getStatus(s.status);
+              const pct = totalPipelineValue > 0 ? ((s.value / totalPipelineValue) * 100).toFixed(0) : 0;
               return (
-                <div key={s.status} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
-                  <span style={{ fontSize: 14 }}>{st.emoji}</span>
-                  <span style={{ flex: 1, fontSize: 13, color: 'var(--text-secondary)' }}>{st.label}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: st.color }}>{s.count} deal{s.count !== 1 ? 's' : ''}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 70, textAlign: 'right' }}>{formatCurrency(s.value)}</span>
+                <div key={s.status} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span>{st.emoji}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{st.label}</span>
+                      <span className="badge" style={{ background: 'var(--color-surface-3)', fontSize: 10.5, padding: '1px 6px' }}>
+                        {s.count} deal{s.count !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: st.color }}>
+                      {formatCurrency(s.value)}
+                    </div>
+                  </div>
+                  {/* Subtle gradient progress bar */}
+                  <div style={{ width: '100%', height: 5, background: 'var(--color-surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${pct}%`,
+                      height: '100%',
+                      background: `linear-gradient(90deg, ${st.color} 0%, rgba(139, 92, 246, 0.8) 100%)`,
+                      borderRadius: 99
+                    }} />
+                  </div>
                 </div>
               );
             })}
           </div>
 
           {(stats?.overdue || []).length > 0 && (
-            <div style={{ marginTop: 16, padding: '10px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', marginBottom: 4 }}>
-                <AlertCircle size={13} style={{ display: 'inline', marginRight: 4 }} />
-                {stats.overdue.length} overdue deal{stats.overdue.length !== 1 ? 's' : ''}
+            <div style={{
+              marginTop: 18,
+              padding: '12px 14px',
+              background: 'rgba(244, 63, 94, 0.1)',
+              border: '1px solid rgba(244, 63, 94, 0.25)',
+              borderRadius: 10
+            }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#f43f5e', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AlertCircle size={14} />
+                <span>{stats.overdue.length} Action Required: Overdue Deliverable{stats.overdue.length !== 1 ? 's' : ''}</span>
               </div>
               {stats.overdue.map(d => (
-                <div key={d.id} style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.brand_name} — {getDeadlineStatus(d.deadline)?.label}</div>
+                <div key={d.id} style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {d.brand_name} — {getDeadlineStatus(d.deadline)?.label}
+                </div>
               ))}
             </div>
           )}
@@ -225,17 +349,6 @@ export default function Dashboard() {
           onCreated={() => { setShowNewDeal(false); load(); }}
         />
       )}
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, sub, accent }) {
-  return (
-    <div className="stat-card">
-      <div className="stat-icon">{icon}</div>
-      <div className="stat-label">{label}</div>
-      <div className={`stat-value ${accent ? 'accent' : ''}`}>{value}</div>
-      <div className="stat-change">{sub}</div>
     </div>
   );
 }

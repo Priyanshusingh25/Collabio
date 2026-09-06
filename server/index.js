@@ -14,13 +14,52 @@ const settingsRouter = require('./routes/settings');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Security Middleware: Hardening HTTP response headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// Security Rate Limiting (In-Memory sliding window for Auth endpoints)
+const authAttempts = new Map();
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 mins
+const MAX_AUTH_ATTEMPTS = 50;
+
+function authRateLimiter(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  const userRecord = authAttempts.get(ip) || { count: 0, firstAttempt: now };
+
+  if (now - userRecord.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+    userRecord.count = 1;
+    userRecord.firstAttempt = now;
+  } else {
+    userRecord.count += 1;
+  }
+  authAttempts.set(ip, userRecord);
+
+  if (userRecord.count > MAX_AUTH_ATTEMPTS) {
+    const retryAfterSeconds = Math.ceil((userRecord.firstAttempt + RATE_LIMIT_WINDOW_MS - now) / 1000);
+    res.setHeader('Retry-After', retryAfterSeconds);
+    return res.status(429).json({
+      error: 'Too many authentication attempts. Please try again later for security reasons.',
+      retryAfterSeconds
+    });
+  }
+  next();
+}
+
 // Middleware
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/api/auth', authRouter);
+// Routes with security hardening
+app.use('/api/auth', authRateLimiter, authRouter);
 app.use('/api/deals', dealsRouter);
 app.use('/api/brands', brandsRouter);
 app.use('/api/stats', statsRouter);
@@ -55,6 +94,13 @@ app.get('/api/health', async (req, res) => {
           brands: brandCount?.count || 0,
           invoices: invoiceCount?.count || 0,
         }
+      },
+      security: {
+        headersEnforced: true,
+        rateLimiterActive: true,
+        sqlInjectionProtection: 'Parameterized Statements',
+        passwordHashing: 'bcrypt (10 rounds)',
+        tokenVerification: 'HMAC-SHA256 JWT'
       },
       uptime: Math.floor(process.uptime()),
       timestamp: new Date().toISOString()
