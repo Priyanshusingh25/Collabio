@@ -50,12 +50,12 @@ export default function Contacts() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span>Contacts & Leads</span>
-            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: 'rgba(6, 182, 212, 0.12)', color: '#06b6d4', padding: '3px 10px', borderRadius: 20 }}>
-              {contacts.length} Leads
+            <span>Contacts</span>
+            <span className="badge" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--text-secondary)' }}>
+              {contacts.length} total
             </span>
           </h1>
-          <p className="page-subtitle">Track brand managers, talent agents, PR representatives, and deal point-of-contacts</p>
+          <p className="page-subtitle">People and companies you work with</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setEditItem(null); setShowModal(true); }}>
           <Plus size={16} /> Add Contact

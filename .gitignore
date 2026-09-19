@@ -1,1 +1,17 @@
 node_modules
+
+# Environment / secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# SQLite runtime artefacts (WAL/SHM change constantly)
+server/db/*.db-wal
+server/db/*.db-shm
+server/tests/*.db
+server/tests/*.db-wal
+server/tests/*.db-shm
+
+# Logs / coverage
+*.log
+coverage/

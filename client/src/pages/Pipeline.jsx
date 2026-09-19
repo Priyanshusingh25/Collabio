@@ -1,49 +1,38 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Search, Filter, Sparkles, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
-import { dealsApi, brandsApi } from '../api';
-import { useAuth } from '../context/AuthContext';
+import { Plus, Search, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { brandsApi } from '../api';
+import { useDeals, useMoveDeal } from '../features/deals/hooks';
+import { useDebouncedValue } from '../hooks/useRealtime';
 import { useToast } from '../context/ToastContext';
-import { getStatus, getPlatform, formatCurrency, getDeadlineStatus, getPipelineColumns } from '../utils/helpers';
+import { getStatus, getPlatform, formatCurrency, getDeadlineStatus, getPipelineColumns, weightedValue } from '../utils/helpers';
 import NewDealModal from '../components/NewDealModal';
 import DealDetailModal from '../components/DealDetailModal';
+import { PageFallback, ErrorState, EmptyState } from '../components/States';
 
 const COLUMNS = getPipelineColumns();
 
 export default function Pipeline() {
-  const { token } = useAuth();
   const { addToast } = useToast();
-  const [deals, setDeals] = useState([]);
   const [brands, setBrands] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showNewDeal, setShowNewDeal] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'high' | 'urgent'
 
-  const load = useCallback(async () => {
-    try {
-      const [d, b] = await Promise.all([dealsApi.getAll(token), brandsApi.getAll(token)]);
-      setDeals(d);
-      setBrands(b);
-    } catch (err) {
-      addToast(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const { data: dealsData, isLoading, isError, error } = useDeals({ search: debouncedSearch || undefined });
+  const moveDeal = useMoveDeal();
+  const deals = Array.isArray(dealsData) ? dealsData : [];
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    brandsApi.getAll().then((b) => setBrands(b || [])).catch(() => {});
+  }, []);
 
   const getDealsByStatus = (status) => {
     return deals
       .filter(d => {
         if (d.status !== status) return false;
-        if (search) {
-          const matchSearch = d.brand_name.toLowerCase().includes(search.toLowerCase()) || 
-                              d.title.toLowerCase().includes(search.toLowerCase());
-          if (!matchSearch) return false;
-        }
         if (filterMode === 'high') return d.priority === 'high';
         if (filterMode === 'urgent') {
           const dl = getDeadlineStatus(d.deadline);
@@ -63,42 +52,28 @@ export default function Pipeline() {
 
     if (source.droppableId === destStatus && source.index === destination.index) return;
 
-    // Optimistically update UI
-    setDeals(prev => prev.map(d =>
-      d.id === dealId ? { ...d, status: destStatus, position: destination.index } : d
-    ));
-
+    // Optimistic stage move (useMoveDeal rolls back on invalid transitions).
     try {
-      await dealsApi.update(token, dealId, {
-        status: destStatus,
-        position: destination.index,
-        paid_at: destStatus === 'paid' ? new Date().toISOString().split('T')[0] : undefined,
-      });
-      addToast(`Moved deal to ${getStatus(destStatus).label} ✨`);
+      await moveDeal.mutateAsync({ id: dealId, status: destStatus, position: destination.index });
+      addToast(`Moved deal to ${getStatus(destStatus).label}`);
     } catch (err) {
       addToast(err.message, 'error');
-      load(); // Revert on error
     }
-  };
-
-  const handleDealUpdated = (updated) => {
-    setDeals(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
-  };
-
-  const handleDealDeleted = (id) => {
-    setDeals(prev => prev.filter(d => d.id !== id));
   };
 
   const columnValue = (status) => {
     return deals.filter(d => d.status === status).reduce((sum, d) => sum + (d.deal_value || 0), 0);
   };
 
-  const totalBoardValue = deals.reduce((sum, d) => sum + (d.deal_value || 0), 0);
+  const weightedBoard = deals.reduce((sum, d) => sum + weightedValue(d), 0);
 
-  if (loading) {
+  if (isLoading) return <PageFallback />;
+  if (isError) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-        <div className="spinner" style={{ width: 36, height: 36 }} />
+      <div className="empty-state" role="alert">
+        <div style={{ color: 'var(--text-muted)' }}><AlertCircle size={28} /></div>
+        <h3>Couldn't load the pipeline</h3>
+        <p>{error?.message || 'Something went wrong.'}</p>
       </div>
     );
   }
@@ -109,12 +84,13 @@ export default function Pipeline() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span>Pipeline Board</span>
-            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: 'rgba(16, 185, 129, 0.12)', color: '#34d399', padding: '3px 10px', borderRadius: 20 }}>
-              {formatCurrency(totalBoardValue)} Total
+            <span>Pipeline</span>
+            <span className="badge" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}
+              title={`Weighted pipeline value ${formatCurrency(weightedBoard)} (deal value × probability)`}>
+              {formatCurrency(weightedBoard)} weighted
             </span>
           </h1>
-          <p className="page-subtitle">Interactive drag-and-drop kanban operating system for creator partnerships</p>
+          <p className="page-subtitle">Drag deals between stages to update status</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowNewDeal(true)}>
           <Plus size={16} /> New Deal
@@ -122,58 +98,39 @@ export default function Pipeline() {
       </div>
 
       {/* Search & Filter Bar */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div className="search-input-wrap" style={{ maxWidth: 380 }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="search-input-wrap" style={{ maxWidth: 360 }}>
           <Search size={16} />
           <input
             className="search-input"
-            placeholder="Search deals, deliverables, brands..."
+            placeholder="Search deals or brands..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
 
         {/* Filter Pills */}
-        <div style={{
-          display: 'flex',
-          gap: 6,
-          background: 'var(--color-surface)',
-          padding: 4,
-          borderRadius: 10,
-          border: '1px solid var(--color-border)'
-        }}>
+        <div className="filter-pills">
           <button
             type="button"
-            className="btn btn-sm"
+            className={`pill ${filterMode === 'all' ? 'active' : ''}`}
             onClick={() => setFilterMode('all')}
-            style={{
-              background: filterMode === 'all' ? 'var(--color-surface-3)' : 'transparent',
-              color: filterMode === 'all' ? '#ffffff' : 'var(--text-muted)'
-            }}
           >
-            All Deals ({deals.length})
+            All ({deals.length})
           </button>
           <button
             type="button"
-            className="btn btn-sm"
+            className={`pill ${filterMode === 'high' ? 'active' : ''}`}
             onClick={() => setFilterMode('high')}
-            style={{
-              background: filterMode === 'high' ? 'rgba(244, 63, 94, 0.15)' : 'transparent',
-              color: filterMode === 'high' ? '#f43f5e' : 'var(--text-muted)'
-            }}
           >
-            🔥 High Priority
+            High priority
           </button>
           <button
             type="button"
-            className="btn btn-sm"
+            className={`pill ${filterMode === 'urgent' ? 'active' : ''}`}
             onClick={() => setFilterMode('urgent')}
-            style={{
-              background: filterMode === 'urgent' ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
-              color: filterMode === 'urgent' ? '#f59e0b' : 'var(--text-muted)'
-            }}
           >
-            ⏰ Due Soon
+            Due soon
           </button>
         </div>
       </div>
@@ -188,7 +145,7 @@ export default function Pipeline() {
               <div key={col.key} className="pipeline-column">
                 <div className="column-header">
                   <div className="column-title">
-                    <span>{col.emoji}</span>
+                    <span className="col-dot" style={{ '--dot': col.color }} />
                     <span>{col.label}</span>
                     <span className="column-count">{colDeals.length}</span>
                   </div>
@@ -202,13 +159,13 @@ export default function Pipeline() {
                       {...provided.droppableProps}
                       className={`column-body ${snapshot.isDraggingOver ? 'drag-over' : ''}`}
                       style={{
-                        background: snapshot.isDraggingOver ? 'rgba(139, 92, 246, 0.06)' : undefined,
-                        transition: 'background 0.2s ease'
+                        background: snapshot.isDraggingOver ? '#e6e9ee' : undefined,
+                        borderRadius: 8,
+                        transition: 'background 0.15s ease'
                       }}
                     >
                       {colDeals.length === 0 && !snapshot.isDraggingOver && (
                         <div className="column-empty">
-                          <div style={{ fontSize: 28, opacity: 0.35, marginBottom: 6 }}>🕳️</div>
                           <div>No deals in this stage</div>
                         </div>
                       )}
@@ -223,14 +180,10 @@ export default function Pipeline() {
                               className="deal-card"
                               style={{
                                 ...provided.draggableProps.style,
-                                opacity: snapshot.isDragging ? 0.92 : 1,
-                                transform: snapshot.isDragging
-                                  ? `${provided.draggableProps.style?.transform} rotate(1.5deg) scale(1.02)`
-                                  : provided.draggableProps.style?.transform,
+                                opacity: snapshot.isDragging ? 0.96 : 1,
                                 boxShadow: snapshot.isDragging
-                                  ? '0 20px 50px rgba(0,0,0,0.8), 0 0 25px rgba(139, 92, 246, 0.4)'
-                                  : undefined,
-                                border: snapshot.isDragging ? '1px solid rgba(139, 92, 246, 0.6)' : undefined
+                                  ? '0 16px 32px -8px rgba(16,24,40,0.3)'
+                                  : undefined
                               }}
                               onClick={() => !snapshot.isDragging && setSelectedDeal(deal)}
                             >
@@ -253,7 +206,6 @@ export default function Pipeline() {
         <NewDealModal
           brands={brands}
           onClose={() => setShowNewDeal(false)}
-          onCreated={(deal) => { setDeals(prev => [deal, ...prev]); }}
         />
       )}
 
@@ -261,8 +213,6 @@ export default function Pipeline() {
         <DealDetailModal
           deal={selectedDeal}
           onClose={() => setSelectedDeal(null)}
-          onUpdated={handleDealUpdated}
-          onDeleted={handleDealDeleted}
         />
       )}
     </div>
@@ -272,6 +222,7 @@ export default function Pipeline() {
 function DealCard({ deal }) {
   const platform = getPlatform(deal.platform);
   const deadline = getDeadlineStatus(deal.deadline);
+  const weighted = weightedValue(deal);
 
   return (
     <>
@@ -287,9 +238,11 @@ function DealCard({ deal }) {
       <div className="deal-card-title">{deal.title}</div>
 
       <div className="deal-card-footer">
-        <div className="deal-card-value">{formatCurrency(deal.deal_value)}</div>
+        <div className="deal-card-value" title={`Weighted ${formatCurrency(weighted)} (${deal.probability ?? 0}% probability)`}>
+          {formatCurrency(deal.deal_value)}
+        </div>
         <div className="deal-card-meta">
-          <span className="platform-badge">{platform.emoji} {platform.label}</span>
+          <span className="platform-badge">{platform.label}</span>
           {deadline && (
             <span className={`deadline-badge ${deadline.type}`}>{deadline.label}</span>
           )}

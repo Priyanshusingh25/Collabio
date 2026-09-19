@@ -1,71 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Calendar, Trash2, Plus, Send, ExternalLink } from 'lucide-react';
-import { getStatus, getPlatform, formatCurrency, formatDate, getDeadlineStatus, STATUSES, PLATFORMS, PRIORITIES, PAYMENT_TERMS } from '../utils/helpers';
-import { dealsApi } from '../api';
-import { useAuth } from '../context/AuthContext';
+import React, { useEffect, useState } from 'react';
+import { X, Trash2, Send } from 'lucide-react';
+import { getStatus, getPlatform, formatCurrency, formatDistance, formatDate, getDeadlineStatus, STATUSES, PLATFORMS, PRIORITIES, PAYMENT_TERMS } from '../utils/helpers';
+import { useDeal, useUpdateDeal, useDeleteDeal, useDealTimeline, useAddDealNote, useDeleteDealNote } from '../features/deals/hooks';
 import { useToast } from '../context/ToastContext';
 
-export default function DealDetailModal({ deal: initialDeal, onClose, onUpdated, onDeleted }) {
-  const { token } = useAuth();
+export default function DealDetailModal({ deal: initialDeal, onClose }) {
   const { addToast } = useToast();
-  const [deal, setDeal] = useState(initialDeal);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...initialDeal });
-  const [loading, setLoading] = useState(false);
   const [noteText, setNoteText] = useState('');
-  const [addingNote, setAddingNote] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const { data: full } = useDeal(initialDeal.id);
+  const { data: timeline } = useDealTimeline(initialDeal.id);
+  const updateDeal = useUpdateDeal();
+  const deleteDeal = useDeleteDeal();
+  const addNote = useAddDealNote(initialDeal.id);
+  const deleteNote = useDeleteDealNote(initialDeal.id);
+
+  const deal = full ? { ...full, notes: full.notes } : { ...initialDeal, notes: initialDeal.notes || [] };
 
   useEffect(() => {
-    // Fetch full deal with notes
-    dealsApi.getOne(token, initialDeal.id).then(d => {
-      setDeal(d);
-      setForm({ ...d });
-    }).catch(() => {});
-  }, [initialDeal.id]);
+    if (full) setForm((prev) => ({ ...prev, ...full }));
+  }, [full]);
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
   const handleSave = async () => {
-    setLoading(true);
     try {
-      const updated = await dealsApi.update(token, deal.id, {
+      await updateDeal.mutateAsync({
         ...form,
+        id: deal.id,
         deal_value: parseFloat(form.deal_value) || 0,
         brand_id: form.brand_id || null,
       });
-      setDeal({ ...updated, notes: deal.notes });
-      setForm({ ...updated, notes: deal.notes });
       setEditing(false);
-      onUpdated(updated);
       addToast('Deal updated!');
-    } catch (err) {
-      addToast(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (newStatus) => {
-    try {
-      const updated = await dealsApi.update(token, deal.id, {
-        status: newStatus,
-        paid_at: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : deal.paid_at,
-      });
-      setDeal(prev => ({ ...prev, ...updated }));
-      setForm(prev => ({ ...prev, ...updated }));
-      onUpdated(updated);
-      addToast(`Moved to ${getStatus(newStatus).label}`);
     } catch (err) {
       addToast(err.message, 'error');
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this deal? This cannot be undone.')) return;
     try {
-      await dealsApi.delete(token, deal.id);
+      await deleteDeal.mutateAsync(deal.id);
       addToast('Deal deleted');
-      onDeleted(deal.id);
       onClose();
     } catch (err) {
       addToast(err.message, 'error');
@@ -74,23 +53,29 @@ export default function DealDetailModal({ deal: initialDeal, onClose, onUpdated,
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
-    setAddingNote(true);
     try {
-      const note = await dealsApi.addNote(token, deal.id, noteText.trim());
-      setDeal(prev => ({ ...prev, notes: [note, ...(prev.notes || [])] }));
+      await addNote.mutateAsync(noteText.trim());
       setNoteText('');
       addToast('Note added');
     } catch (err) {
       addToast(err.message, 'error');
-    } finally {
-      setAddingNote(false);
     }
   };
 
   const handleDeleteNote = async (noteId) => {
     try {
-      await dealsApi.deleteNote(token, deal.id, noteId);
-      setDeal(prev => ({ ...prev, notes: (prev.notes || []).filter(n => n.id !== noteId) }));
+      await deleteNote.mutateAsync(noteId);
+    } catch (err) {
+      addToast(err.message, 'error');
+    }
+  };
+
+  /** Stage transition from the detail modal (validated server-side). */
+  const handleStatusChange = async (nextStatus) => {
+    if (nextStatus === deal.status) return;
+    try {
+      await updateDeal.mutateAsync({ id: deal.id, status: nextStatus });
+      addToast('Stage updated');
     } catch (err) {
       addToast(err.message, 'error');
     }
@@ -102,30 +87,30 @@ export default function DealDetailModal({ deal: initialDeal, onClose, onUpdated,
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+      <div className="modal modal-lg" role="dialog" aria-modal="true" aria-label={`Deal: ${deal.brand_name}`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span className={`badge badge-${deal.status}`}>{status.emoji} {status.label}</span>
-              <span className="badge" style={{ background: 'var(--color-surface-3)', color: 'var(--text-secondary)', border: '1px solid var(--color-border)' }}>
-                {platform.emoji} {platform.label}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+              <span className={`badge badge-${deal.status}`}>{status.label}</span>
+              <span className="badge" style={{ background: 'var(--color-surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--color-border)' }}>
+                {platform.label}
               </span>
               {deal.priority === 'high' && (
-                <span className="badge" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>🔥 High Priority</span>
+                <span className="badge badge-priority_high">High priority</span>
               )}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{deal.brand_name}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{deal.brand_name}</div>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{deal.title}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
             {!editing && (
               <button className="btn btn-secondary btn-sm" onClick={() => setEditing(true)}>Edit</button>
             )}
-            <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={18} /></button>
+            <button className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Close deal details"><X size={18} /></button>
           </div>
         </div>
 
-        <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        <div className="modal-body modal-body-split">
           {/* Left column */}
           <div>
             {editing ? (
@@ -239,7 +224,7 @@ export default function DealDetailModal({ deal: initialDeal, onClose, onUpdated,
                 onKeyDown={e => e.key === 'Enter' && handleAddNote()}
                 style={{ flex: 1 }}
               />
-              <button className="btn btn-primary btn-sm" onClick={handleAddNote} disabled={addingNote}>
+              <button className="btn btn-primary btn-sm" onClick={handleAddNote} disabled={addNote.isPending} aria-label="Add note">
                 <Send size={13} />
               </button>
             </div>
@@ -266,7 +251,7 @@ export default function DealDetailModal({ deal: initialDeal, onClose, onUpdated,
             {/* Danger zone */}
             {!editing && (
               <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
-                <button className="btn btn-danger btn-sm" style={{ width: '100%' }} onClick={handleDelete}>
+                <button className="btn btn-danger btn-sm" style={{ width: '100%' }} onClick={() => setConfirmDelete(true)}>
                   <Trash2 size={13} /> Delete Deal
                 </button>
               </div>
@@ -274,11 +259,26 @@ export default function DealDetailModal({ deal: initialDeal, onClose, onUpdated,
           </div>
         </div>
 
+        {confirmDelete && (
+          <div className="confirm-inline" role="alertdialog" aria-label="Confirm delete deal">
+            <div className="confirm-inline-text">
+              <strong>Delete this deal?</strong>
+              <span>“{deal.brand_name} — {deal.title}” and its notes will be permanently removed. This action cannot be undone.</span>
+            </div>
+            <div className="confirm-inline-actions">
+              <button className="btn btn-secondary btn-sm" onClick={() => setConfirmDelete(false)}>Cancel</button>
+              <button className="btn btn-danger btn-sm" onClick={handleDelete} disabled={deleteDeal.isPending}>
+                {deleteDeal.isPending ? 'Deleting…' : 'Yes, delete'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {editing && (
           <div className="modal-footer">
             <button className="btn btn-secondary" onClick={() => { setEditing(false); setForm({ ...deal }); }}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={loading}>
-              {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '💾'} Save Changes
+            <button className="btn btn-primary" onClick={handleSave} disabled={updateDeal.isPending}>
+              {updateDeal.isPending ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '💾'} Save Changes
             </button>
           </div>
         )}

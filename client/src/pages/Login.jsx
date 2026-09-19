@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Eye, EyeOff, Sparkles, Database, ShieldCheck, ArrowRight, 
-  UserCheck, CheckCircle2, TrendingUp, Zap, Lock
+import {
+  Eye, EyeOff, ArrowRight,
+  UserCheck, CheckCircle2, Handshake, FolderKanban, FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -40,10 +40,10 @@ export default function LoginPage() {
     try {
       if (mode === 'login') {
         await login(form.email, form.password, rememberMe);
-        addToast('Welcome back! 🚀');
+        addToast('Welcome back');
       } else {
         await register(form.username, form.email, form.password, form.display_name);
-        addToast('Account created successfully! ✨');
+        addToast('Account created successfully');
       }
       navigate('/dashboard');
     } catch (err) {
@@ -57,7 +57,7 @@ export default function LoginPage() {
     setDemoLoading(true);
     try {
       await loginAsDemo();
-      addToast('Welcome Alex Rivera (Demo Creator) 🎬');
+      addToast('Signed in to demo workspace');
       navigate('/dashboard');
     } catch (err) {
       addToast(err.message || 'Demo login failed', 'error');
@@ -73,132 +73,122 @@ export default function LoginPage() {
       password: 'creator123'
     }));
     setMode('login');
-    addToast('Demo credentials loaded! Click Sign In or 1-Click Demo.', 'info');
+    addToast('Demo credentials filled. Select Sign In or Try Demo.', 'info');
   };
 
   return (
     <div className="auth-page">
-      {/* Left Pane: Awwwards / Shopify Editions Editorial Showcase */}
+      {/* Left Pane: product overview */}
       <div className="auth-hero-pane">
         <div className="auth-hero-badge">
-          <Sparkles size={13} />
-          <span>Award-Grade Creator CRM & Deal Suite</span>
+          <Handshake size={13} />
+          <span>Creator CRM & Deal Management</span>
         </div>
 
         <h1 className="auth-hero-headline">
-          The Operating System for Modern Creators.
+          Manage every brand deal in one place.
         </h1>
 
         <p className="auth-hero-sub">
-          Manage brand sponsorships, track multi-stage deal pipelines, send itemized high-ticket invoices, and scale your creative business with developer-grade security.
+          Track pipeline stages, deliverables, invoices, and payments across
+          every sponsorship — with clear reporting and reliable local storage.
         </p>
 
-        {/* Floating Preview Cards with Subtle Float Animation */}
-        <div style={{ maxWidth: 460 }}>
-          <div className="auth-floating-card" style={{ animationDelay: '0s' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: 10, background: 'rgba(139, 92, 246, 0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20
-              }}>
-                🎧
+        {/* 3D product preview — layered deal cards */}
+        <div className="auth-stage">
+          <div className="auth-mock">
+            <div className="auth-mock-top">
+              <div className="auth-mock-icon" style={{ background: '#eef0ff', color: '#4f46e5' }}>
+                <FolderKanban size={18} />
               </div>
               <div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>Sony Electronics</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>WH-1000XM6 Headphones Studio Deep Dive</div>
+                <div className="auth-mock-name">Sony Electronics</div>
+                <div className="auth-mock-sub">Product review · YouTube · Due Mar 12</div>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 700, color: '#34d399' }}>$7,500</div>
+              <div className="auth-mock-value">$7,500</div>
               <span className="badge badge-negotiating">Negotiating</span>
             </div>
           </div>
 
-          <div className="auth-floating-card" style={{ animationDelay: '-3s' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: 10, background: 'rgba(6, 182, 212, 0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20
-              }}>
-                ⚡
+          <div className="auth-mock">
+            <div className="auth-mock-top">
+              <div className="auth-mock-icon" style={{ background: '#ecfdf3', color: '#027a48' }}>
+                <FileText size={18} />
               </div>
               <div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>Notion AI 2.0</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Dedicated Video + Template Share</div>
+                <div className="auth-mock-name">Notion</div>
+                <div className="auth-mock-sub">Invoice INV-0241 · Net-30 · Paid</div>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 700, color: '#34d399' }}>$4,500</div>
-              <span className="badge badge-active">Active</span>
+              <div className="auth-mock-value">$4,500</div>
+              <span className="badge badge-paid">Paid</span>
             </div>
           </div>
         </div>
 
-        {/* Trust & Architecture Points */}
-        <div style={{ display: 'flex', gap: 24, marginTop: 24, fontSize: 12.5, color: 'var(--text-secondary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <CheckCircle2 size={16} color="#10b981" />
-            <span>SQLite WAL Persistence</span>
+        {/* Trust points */}
+        <div className="auth-proof">
+          <div className="auth-proof-item">
+            <CheckCircle2 size={15} color="#6ce9a6" />
+            <span>Pipeline + invoicing</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ShieldCheck size={16} color="#8b5cf6" />
-            <span>bcrypt + JWT Security</span>
+          <div className="auth-proof-item">
+            <CheckCircle2 size={15} color="#6ce9a6" />
+            <span>Local-first storage</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Zap size={16} color="#f59e0b" />
-            <span>Sub-10ms Local Latency</span>
+          <div className="auth-proof-item">
+            <CheckCircle2 size={15} color="#6ce9a6" />
+            <span>Role-based access</span>
           </div>
         </div>
       </div>
 
-      {/* Right Pane: Glassmorphic Auth Card */}
+      {/* Right Pane: sign-in card */}
       <div className="auth-form-pane">
         <div className="auth-card">
           {/* Logo Header */}
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div className="sidebar-logo-icon" style={{ margin: '0 auto 12px', width: 44, height: 44, fontSize: 22 }}>
-              🤝
+          <div style={{ marginBottom: 22 }}>
+            <div className="sidebar-logo-icon" style={{ margin: '0 0 12px', width: 36, height: 36 }}>
+              <Handshake size={18} strokeWidth={2.25} />
             </div>
             <div style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 24,
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              background: 'linear-gradient(135deg, #ffffff 0%, #d4d8e8 60%, #a855f7 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
+              fontSize: 20,
+              fontWeight: 750,
+              letterSpacing: '-0.02em',
+              color: 'var(--text-primary)'
             }}>
-              Collabio
+              {mode === 'login' ? 'Sign in to Collabio' : 'Create your account'}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-              Creator Business & Sponsorship Suite
+            <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 4 }}>
+              Creator deal pipeline, invoicing, and reporting.
             </div>
           </div>
 
-          {/* 1-Click Instant Demo Callout with Glowing Aura */}
+          {/* Demo callout */}
           <div style={{
-            marginBottom: 20,
-            padding: '16px',
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(236, 72, 153, 0.08) 100%)',
-            borderRadius: 14,
-            border: '1px solid rgba(139, 92, 246, 0.35)',
-            boxShadow: '0 0 25px rgba(139, 92, 246, 0.12)'
+            marginBottom: 18,
+            padding: '14px',
+            background: 'var(--color-surface-2)',
+            borderRadius: 10,
+            border: '1px solid var(--color-border)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{
-                fontFamily: 'var(--font-display)',
                 fontSize: 11,
                 fontWeight: 700,
                 textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: '#c084fc',
+                letterSpacing: '0.07em',
+                color: 'var(--text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5
               }}>
-                <Sparkles size={13} /> Instant Evaluation
+                <UserCheck size={13} /> Demo workspace
               </span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Zero signup required</span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>No signup needed</span>
             </div>
 
             <button
@@ -208,23 +198,22 @@ export default function LoginPage() {
               disabled={demoLoading}
               style={{
                 justifyContent: 'center',
-                fontWeight: 700,
+                fontWeight: 650,
                 fontSize: 13.5,
-                padding: '11px 16px',
-                borderRadius: 10
+                padding: '10px 16px'
               }}
             >
               {demoLoading ? (
                 <div className="spinner" style={{ width: 16, height: 16 }} />
               ) : (
                 <>
-                  <UserCheck size={16} /> 1-Click Demo (Alex Rivera) <ArrowRight size={15} />
+                  <UserCheck size={16} /> Try the demo <ArrowRight size={15} />
                 </>
               )}
             </button>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-              <span>Pre-populated with 8 deals & 6 brands</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, fontSize: 11.5, color: 'var(--text-muted)' }}>
+              <span>Sample deals, brands, and invoices</span>
               <button
                 type="button"
                 onClick={fillDemoCredentials}
@@ -234,7 +223,7 @@ export default function LoginPage() {
                   color: 'var(--accent-1)',
                   cursor: 'pointer',
                   textDecoration: 'underline',
-                  fontSize: 11,
+                  fontSize: 11.5,
                   fontWeight: 600
                 }}
               >
@@ -245,8 +234,8 @@ export default function LoginPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', margin: '16px 0', gap: 12 }}>
             <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-            <span style={{ fontSize: 10.5, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
-              or sign in with password
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
+              or continue with email
             </span>
             <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
           </div>
@@ -256,7 +245,7 @@ export default function LoginPage() {
             display: 'flex',
             background: 'var(--color-surface-2)',
             padding: 3,
-            borderRadius: 10,
+            borderRadius: 8,
             marginBottom: 16,
             border: '1px solid var(--color-border)'
           }}>
@@ -265,12 +254,14 @@ export default function LoginPage() {
               onClick={() => setMode('login')}
               style={{
                 flex: 1,
-                padding: '8px 12px',
-                borderRadius: 8,
+                padding: '7px 12px',
+                borderRadius: 6,
                 fontSize: 13,
                 fontWeight: 600,
-                color: mode === 'login' ? '#ffffff' : 'var(--text-muted)',
-                background: mode === 'login' ? 'var(--color-surface-3)' : 'transparent',
+                color: mode === 'login' ? 'var(--text-primary)' : 'var(--text-muted)',
+                background: mode === 'login' ? 'var(--color-surface)' : 'transparent',
+                boxShadow: mode === 'login' ? 'var(--shadow-xs)' : 'none',
+                border: mode === 'login' ? '1px solid var(--color-border)' : '1px solid transparent',
                 transition: 'var(--transition-fast)'
               }}
             >
@@ -281,12 +272,14 @@ export default function LoginPage() {
               onClick={() => setMode('register')}
               style={{
                 flex: 1,
-                padding: '8px 12px',
-                borderRadius: 8,
+                padding: '7px 12px',
+                borderRadius: 6,
                 fontSize: 13,
                 fontWeight: 600,
-                color: mode === 'register' ? '#ffffff' : 'var(--text-muted)',
-                background: mode === 'register' ? 'var(--color-surface-3)' : 'transparent',
+                color: mode === 'register' ? 'var(--text-primary)' : 'var(--text-muted)',
+                background: mode === 'register' ? 'var(--color-surface)' : 'transparent',
+                boxShadow: mode === 'register' ? 'var(--shadow-xs)' : 'none',
+                border: mode === 'register' ? '1px solid var(--color-border)' : '1px solid transparent',
                 transition: 'var(--transition-fast)'
               }}
             >
@@ -387,37 +380,35 @@ export default function LoginPage() {
               className="btn btn-secondary w-full"
               style={{
                 justifyContent: 'center',
-                padding: '11px',
-                fontWeight: 600,
-                border: '1px solid rgba(139, 92, 246, 0.3)'
+                padding: '10px',
+                fontWeight: 600
               }}
               disabled={loading}
             >
               {loading ? (
                 <div className="spinner" style={{ width: 16, height: 16 }} />
               ) : (
-                mode === 'login' ? 'Sign In' : 'Create Creator Account'
+                mode === 'login' ? 'Sign In' : 'Create account'
               )}
             </button>
           </form>
 
-          {/* SQLite 3 WAL Engine Live Badge */}
+          {/* Storage note */}
           <div style={{
-            marginTop: 20,
+            marginTop: 16,
             padding: '10px 12px',
             background: 'var(--color-surface-2)',
-            borderRadius: 10,
+            borderRadius: 8,
             border: '1px solid var(--color-border)',
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-secondary)'
           }}>
             <div className="db-beacon" />
             <div style={{ flex: 1 }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Persistent SQLite 3 (WAL):</span>{' '}
-              All deals, brands & invoices survive restarts on disk.
+              Data is stored locally and persists across restarts.
             </div>
           </div>
         </div>

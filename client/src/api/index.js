@@ -1,93 +1,143 @@
-const API = '/api';
-
-function authHeaders(token) {
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
-}
-
-async function request(url, options = {}, token) {
-  const r = await fetch(url, { ...options, headers: { ...authHeaders(token), ...options.headers } });
-  if (r.status === 204) return null;
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error || 'Request failed');
-  return data;
-}
+/**
+ * Compatibility API layer.
+ * Existing pages call `dealsApi.getAll(token)` — token now comes from the
+ * auth store automatically and every call routes through the new
+ * /api/v1 client (envelope-unwrapping, normalized errors).
+ */
+import { api, endpoints } from '../lib/api';
 
 // Deals
 export const dealsApi = {
-  getAll: (token, params = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    return request(`${API}/deals${qs ? '?' + qs : ''}`, {}, token);
-  },
-  getOne: (token, id) => request(`${API}/deals/${id}`, {}, token),
-  create: (token, data) => request(`${API}/deals`, { method: 'POST', body: JSON.stringify(data) }, token),
-  update: (token, id, data) => request(`${API}/deals/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  delete: (token, id) => request(`${API}/deals/${id}`, { method: 'DELETE' }, token),
-  addNote: (token, id, content) => request(`${API}/deals/${id}/notes`, { method: 'POST', body: JSON.stringify({ content }) }, token),
-  deleteNote: (token, dealId, noteId) => request(`${API}/deals/${dealId}/notes/${noteId}`, { method: 'DELETE' }, token),
+  getAll: (_token, params = {}) => endpoints.deals.list(params),
+  getOne: (_token, id) => endpoints.deals.get(id),
+  create: (_token, data) => endpoints.deals.create(data),
+  update: (_token, id, data) => endpoints.deals.update(id, data),
+  move: (_token, id, data) => endpoints.deals.move(id, data),
+  delete: (_token, id) => endpoints.deals.remove(id),
+  addNote: (_token, id, content) => endpoints.deals.addNote(id, content),
+  deleteNote: (_token, dealId, noteId) => endpoints.deals.deleteNote(dealId, noteId),
+  timeline: (_token, id) => endpoints.deals.timeline(id),
 };
 
 // Brands
 export const brandsApi = {
-  getAll: (token) => request(`${API}/brands`, {}, token),
-  getOne: (token, id) => request(`${API}/brands/${id}`, {}, token),
-  create: (token, data) => request(`${API}/brands`, { method: 'POST', body: JSON.stringify(data) }, token),
-  update: (token, id, data) => request(`${API}/brands/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  delete: (token, id) => request(`${API}/brands/${id}`, { method: 'DELETE' }, token),
+  getAll: (_token, params = {}) => endpoints.brands.list(params),
+  getOne: (_token, id) => endpoints.brands.get(id),
+  create: (_token, data) => endpoints.brands.create(data),
+  update: (_token, id, data) => endpoints.brands.update(id, data),
+  delete: (_token, id) => endpoints.brands.remove(id),
 };
 
 // Stats
 export const statsApi = {
-  getOverview: (token) => request(`${API}/stats/overview`, {}, token),
+  getOverview: () => endpoints.stats.overview(),
+  getRevenue: () => endpoints.stats.revenue(),
+  getForecast: () => endpoints.stats.forecast(),
 };
 
 // Services
 export const servicesApi = {
-  getAll: (token) => request(`${API}/services`, {}, token),
-  getOne: (token, id) => request(`${API}/services/${id}`, {}, token),
-  create: (token, data) => request(`${API}/services`, { method: 'POST', body: JSON.stringify(data) }, token),
-  update: (token, id, data) => request(`${API}/services/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  delete: (token, id) => request(`${API}/services/${id}`, { method: 'DELETE' }, token),
+  getAll: () => endpoints.services.list(),
+  getOne: (_token, id) => api.get(`/services/${id}`),
+  create: (_token, data) => endpoints.services.create(data),
+  update: (_token, id, data) => endpoints.services.update(id, data),
+  delete: (_token, id) => endpoints.services.remove(id),
 };
 
 // Contacts
 export const contactsApi = {
-  getAll: (token) => request(`${API}/contacts`, {}, token),
-  getOne: (token, id) => request(`${API}/contacts/${id}`, {}, token),
-  create: (token, data) => request(`${API}/contacts`, { method: 'POST', body: JSON.stringify(data) }, token),
-  update: (token, id, data) => request(`${API}/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  delete: (token, id) => request(`${API}/contacts/${id}`, { method: 'DELETE' }, token),
+  getAll: (_token, params = {}) => endpoints.contacts.list(params),
+  getOne: (_token, id) => endpoints.contacts.get(id),
+  create: (_token, data) => endpoints.contacts.create(data),
+  update: (_token, id, data) => endpoints.contacts.update(id, data),
+  delete: (_token, id) => endpoints.contacts.remove(id),
 };
 
 // Invoices
 export const invoicesApi = {
-  getAll: (token) => request(`${API}/invoices`, {}, token),
-  getOne: (token, id) => request(`${API}/invoices/${id}`, {}, token),
-  create: (token, data) => request(`${API}/invoices`, { method: 'POST', body: JSON.stringify(data) }, token),
-  update: (token, id, data) => request(`${API}/invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  delete: (token, id) => request(`${API}/invoices/${id}`, { method: 'DELETE' }, token),
+  getAll: (_token, params = {}) => endpoints.invoices.list(params),
+  getOne: (_token, id) => endpoints.invoices.get(id),
+  create: (_token, data) => endpoints.invoices.create(data),
+  update: (_token, id, data) => endpoints.invoices.update(id, data),
+  delete: (_token, id) => endpoints.invoices.remove(id),
+  addPayment: (_token, id, data) => endpoints.invoices.addPayment(id, data),
 };
 
 // Notes
 export const notesApi = {
-  getAll: (token) => request(`${API}/notes`, {}, token),
-  create: (token, data) => request(`${API}/notes`, { method: 'POST', body: JSON.stringify(data) }, token),
-  update: (token, id, data) => request(`${API}/notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  delete: (token, id) => request(`${API}/notes/${id}`, { method: 'DELETE' }, token),
+  getAll: () => endpoints.notes.list(),
+  create: (_token, data) => endpoints.notes.create(data),
+  update: (_token, id, data) => endpoints.notes.update(id, data),
+  delete: (_token, id) => endpoints.notes.remove(id),
 };
 
-// Settings
+// Tasks
+export const tasksApi = {
+  getAll: (_token, params = {}) => endpoints.tasks.list(params),
+  create: (_token, data) => endpoints.tasks.create(data),
+  update: (_token, id, data) => endpoints.tasks.update(id, data),
+  setStatus: (_token, id, status) => endpoints.tasks.setStatus(id, status),
+  delete: (_token, id) => endpoints.tasks.remove(id),
+};
+
+// Templates
+export const templatesApi = {
+  getAll: (_token, params = {}) => endpoints.templates.list(params),
+  create: (_token, data) => endpoints.templates.create(data),
+  update: (_token, id, data) => endpoints.templates.update(id, data),
+  delete: (_token, id) => endpoints.templates.remove(id),
+};
+
+// Communications
+export const communicationsApi = {
+  getAll: (_token, params = {}) => endpoints.communications.list(params),
+  create: (_token, data) => endpoints.communications.create(data),
+  delete: (_token, id) => endpoints.communications.remove(id),
+};
+
+// Notifications
+export const notificationsApi = {
+  getAll: (_token, params = {}) => endpoints.notifications.list(params),
+  unreadCount: () => endpoints.notifications.unreadCount(),
+  markRead: (_token, id) => endpoints.notifications.markRead(id),
+  markAllRead: () => endpoints.notifications.markAllRead(),
+};
+
+// Activity
+export const activityApi = {
+  getAll: (_token, params = {}) => endpoints.activity.list(params),
+};
+
+// Global search
+export const searchApi = {
+  query: (q) => endpoints.search(q),
+};
+
+// Settings & preferences
 export const settingsApi = {
-  get: (token) => request(`${API}/settings`, {}, token),
-  update: (token, data) => request(`${API}/settings`, { method: 'PUT', body: JSON.stringify(data) }, token),
-  exportData: (token) => request(`${API}/settings/export`, {}, token),
+  get: () => endpoints.preferences.get(),
+  update: (_token, data) => endpoints.preferences.update(data),
+  exportData: () => endpoints.workspace.export(),
+  restore: (data) => endpoints.workspace.restore(data),
 };
 
-// Health & System Info
-export const healthApi = {
-  check: async () => {
-    const res = await fetch(`${API}/health`);
-    return res.json();
-  }
+// Preferences (new)
+export const preferencesApi = {
+  get: () => endpoints.preferences.get(),
+  update: (data) => endpoints.preferences.update(data),
+  listViews: () => endpoints.preferences.listViews(),
+  createView: (data) => endpoints.preferences.createView(data),
+  deleteView: (id) => endpoints.preferences.deleteView(id),
 };
 
+// Workspace (import/export/backup)
+export const workspaceApi = {
+  export: () => endpoints.workspace.export(),
+  restore: (body) => endpoints.workspace.restore(body),
+  importPreview: (body) => endpoints.workspace.importPreview(body),
+  importCommit: (body) => endpoints.workspace.importCommit(body),
+  csvUrl: endpoints.workspace.csvUrl,
+};
 
+// Health
+export const healthApi = { check: () => endpoints.health() };

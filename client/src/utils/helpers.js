@@ -1,24 +1,24 @@
-// Status helpers
+// Status helpers — muted professional palette
 export const STATUSES = [
-  { key: 'outreach', label: 'Outreach', color: '#60a5fa', emoji: '📤' },
-  { key: 'negotiating', label: 'Negotiating', color: '#f59e0b', emoji: '🤝' },
-  { key: 'contract_sent', label: 'Contract Sent', color: '#8b5cf6', emoji: '📝' },
-  { key: 'active', label: 'Active', color: '#10b981', emoji: '🎬' },
-  { key: 'invoiced', label: 'Invoiced', color: '#f97316', emoji: '💸' },
-  { key: 'paid', label: 'Paid', color: '#22c55e', emoji: '✅' },
-  { key: 'archived', label: 'Archived', color: '#6b7280', emoji: '📦' },
+  { key: 'outreach', label: 'Outreach', color: '#175cd3', emoji: '' },
+  { key: 'negotiating', label: 'Negotiating', color: '#b54708', emoji: '' },
+  { key: 'contract_sent', label: 'Contract Sent', color: '#5925dc', emoji: '' },
+  { key: 'active', label: 'Active', color: '#027a48', emoji: '' },
+  { key: 'invoiced', label: 'Invoiced', color: '#b54708', emoji: '' },
+  { key: 'paid', label: 'Paid', color: '#067647', emoji: '' },
+  { key: 'archived', label: 'Archived', color: '#667085', emoji: '' },
 ];
 
 export const PLATFORMS = [
-  { key: 'YouTube', label: 'YouTube', emoji: '▶️', color: '#ff0000' },
-  { key: 'Instagram', label: 'Instagram', emoji: '📷', color: '#e1306c' },
-  { key: 'TikTok', label: 'TikTok', emoji: '🎵', color: '#69c9d0' },
-  { key: 'Twitter', label: 'Twitter / X', emoji: '𝕏', color: '#1da1f2' },
-  { key: 'Newsletter', label: 'Newsletter', emoji: '📧', color: '#f59e0b' },
-  { key: 'Podcast', label: 'Podcast', emoji: '🎙️', color: '#8b5cf6' },
-  { key: 'LinkedIn', label: 'LinkedIn', emoji: '💼', color: '#0077b5' },
-  { key: 'Blog', label: 'Blog', emoji: '✍️', color: '#6b7280' },
-  { key: 'Twitch', label: 'Twitch', emoji: '🎮', color: '#9147ff' },
+  { key: 'YouTube', label: 'YouTube', emoji: '', color: '#667085' },
+  { key: 'Instagram', label: 'Instagram', emoji: '', color: '#667085' },
+  { key: 'TikTok', label: 'TikTok', emoji: '', color: '#667085' },
+  { key: 'Twitter', label: 'Twitter / X', emoji: '', color: '#667085' },
+  { key: 'Newsletter', label: 'Newsletter', emoji: '', color: '#667085' },
+  { key: 'Podcast', label: 'Podcast', emoji: '', color: '#667085' },
+  { key: 'LinkedIn', label: 'LinkedIn', emoji: '', color: '#667085' },
+  { key: 'Blog', label: 'Blog', emoji: '', color: '#667085' },
+  { key: 'Twitch', label: 'Twitch', emoji: '', color: '#667085' },
 ];
 
 export const PRIORITIES = [
@@ -32,11 +32,11 @@ export const PAYMENT_TERMS = [
 ];
 
 export function getStatus(key) {
-  return STATUSES.find(s => s.key === key) || { key, label: key, color: '#6b7280', emoji: '•' };
+  return STATUSES.find(s => s.key === key) || { key, label: key, color: '#667085', emoji: '' };
 }
 
 export function getPlatform(key) {
-  return PLATFORMS.find(p => p.key === key) || { key, label: key, emoji: '🌐', color: '#6b7280' };
+  return PLATFORMS.find(p => p.key === key) || { key, label: key, emoji: '', color: '#667085' };
 }
 
 export function formatCurrency(value, currency = 'USD') {
@@ -63,4 +63,37 @@ export function getDeadlineStatus(deadlineStr) {
 
 export function getPipelineColumns() {
   return STATUSES.filter(s => s.key !== 'archived');
+}
+
+/** "3d ago" / "in 2d" — used by activity feeds and notifications. */
+export function formatDistance(dateStr) {
+  if (!dateStr) return '';
+  const then = new Date(String(dateStr).replace(' ', 'T'));
+  if (Number.isNaN(then.getTime())) return '';
+  const diffMs = then - new Date();
+  const absDays = Math.floor(Math.abs(diffMs) / 86400000);
+  const absHours = Math.floor(Math.abs(diffMs) / 3600000);
+  const absMin = Math.floor(Math.abs(diffMs) / 60000);
+  if (absMin < 1) return 'just now';
+  if (absMin < 60) return `${absMin}m ${diffMs > 0 ? 'from now' : 'ago'}`;
+  if (absHours < 24) return `${absHours}h ${diffMs > 0 ? 'from now' : 'ago'}`;
+  if (absDays < 30) return `${absDays}d ${diffMs > 0 ? 'from now' : 'ago'}`;
+  return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/** Pipeline stages with the extended flow (in_review / published). */
+export const PIPELINE_STAGES = [
+  { key: 'outreach', label: 'Outreach', color: '#175cd3', emoji: '' },
+  { key: 'negotiating', label: 'Negotiating', color: '#b54708', emoji: '' },
+  { key: 'contract_sent', label: 'Contract Sent', color: '#5925dc', emoji: '' },
+  { key: 'active', label: 'In Progress', color: '#027a48', emoji: '' },
+  { key: 'in_review', label: 'In Review', color: '#026aa2', emoji: '' },
+  { key: 'published', label: 'Published', color: '#067647', emoji: '' },
+  { key: 'invoiced', label: 'Invoiced', color: '#b54708', emoji: '' },
+  { key: 'paid', label: 'Paid', color: '#067647', emoji: '' },
+];
+
+/** Weighted value = value × probability (deal-level forecast input). */
+export function weightedValue(deal) {
+  return Math.round(((deal.deal_value || 0) * (deal.probability ?? 0)) / 100);
 }

@@ -6,13 +6,13 @@ import { useToast } from '../context/ToastContext';
 import { formatDate } from '../utils/helpers';
 
 const COLORS = {
-  purple: '#8b5cf6',
-  cyan: '#06b6d4',
-  green: '#10b981',
-  yellow: '#f59e0b',
-  rose: '#f43f5e',
-  blue: '#3b82f6',
-  gray: '#6b7280'
+  slate: '#475467',
+  indigo: '#4f46e5',
+  blue: '#026aa2',
+  green: '#027a48',
+  amber: '#b54708',
+  red: '#b42318',
+  gray: '#667085'
 };
 
 export default function Notes() {
@@ -55,7 +55,7 @@ export default function Notes() {
         const next = prev.map(n => n.id === note.id ? updated : n);
         return next.sort((a, b) => b.is_pinned - a.is_pinned || new Date(b.created_at) - new Date(a.created_at));
       });
-      addToast(note.is_pinned ? 'Unpinned note' : 'Pinned note to top 📌');
+      addToast(note.is_pinned ? 'Note unpinned' : 'Note pinned');
     } catch (err) {
       addToast(err.message, 'error');
     }
@@ -67,12 +67,12 @@ export default function Notes() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span>Sponsorship Pitch & Quick Notes</span>
-            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: 'rgba(139, 92, 246, 0.12)', color: '#c084fc', padding: '3px 10px', borderRadius: 20 }}>
-              {notes.length} Notes
+            <span>Notes</span>
+            <span className="badge" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--text-secondary)' }}>
+              {notes.length} total
             </span>
           </h1>
-          <p className="page-subtitle">Scratchpad for pitch templates, rate calculations, audience stats, and brand negotiations</p>
+          <p className="page-subtitle">Pitches, templates, and working notes</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setEditItem(null); setShowModal(true); }}>
           <Plus size={16} /> Add Note
@@ -85,39 +85,30 @@ export default function Notes() {
         </div>
       ) : notes.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">📝</div>
-          <div className="empty-state-title">No pitch notes created yet</div>
-          <div className="empty-state-text">Keep your sponsorship templates, talking points, and rate cards handy.</div>
+          <div style={{ color: 'var(--text-muted)' }}><StickyNote size={30} /></div>
+          <h3>No notes yet</h3>
+          <p>Keep pitch templates and talking points here.</p>
           <button className="btn btn-primary mt-4" onClick={() => setShowModal(true)}>
-            <Plus size={15} /> Create Note
+            <Plus size={15} /> Add note
           </button>
         </div>
       ) : (
         <div className="grid-3" style={{ gridAutoRows: 'max-content' }}>
           {notes.map(note => {
-            const cardColor = COLORS[note.color] || COLORS.purple;
+            const cardColor = COLORS[note.color] || COLORS.slate;
             return (
-              <div 
-                key={note.id} 
-                className="card" 
+              <div
+                key={note.id}
+                className="card"
                 onClick={() => { setEditItem(note); setShowModal(true); }}
-                style={{ 
-                  cursor: 'pointer', 
+                style={{
+                  cursor: 'pointer',
                   borderTop: `3px solid ${cardColor}`,
                   display: 'flex',
                   flexDirection: 'column',
                   position: 'relative',
-                  transition: 'var(--transition-spring)',
-                  background: note.is_pinned ? 'rgba(20, 24, 40, 0.95)' : 'var(--color-surface)',
-                  borderColor: note.is_pinned ? 'rgba(139, 92, 246, 0.35)' : undefined
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-3px)';
-                  e.currentTarget.style.borderColor = cardColor;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.borderColor = note.is_pinned ? 'rgba(139, 92, 246, 0.35)' : 'var(--color-border)';
+                  transition: 'var(--transition-fast)',
+                  background: 'var(--color-surface)'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>

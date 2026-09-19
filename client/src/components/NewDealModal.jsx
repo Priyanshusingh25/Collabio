@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { X, DollarSign, Calendar, Zap } from 'lucide-react';
+import { X } from 'lucide-react';
 import { PLATFORMS, STATUSES, PRIORITIES, PAYMENT_TERMS } from '../utils/helpers';
 import { dealsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-
-const PLATFORM_EMOJIS = { YouTube: '▶️', Instagram: '📷', TikTok: '🎵', Twitter: '𝕏', Newsletter: '📧', Podcast: '🎙️', LinkedIn: '💼', Blog: '✍️', Twitch: '🎮' };
 
 export default function NewDealModal({ onClose, onCreated, brands = [] }) {
   const { token } = useAuth();
@@ -49,7 +47,7 @@ export default function NewDealModal({ onClose, onCreated, brands = [] }) {
         deal_value: parseFloat(form.deal_value) || 0,
         brand_id: form.brand_id ? parseInt(form.brand_id) : null,
       });
-      addToast('Deal created! 🎉');
+      addToast('Deal created');
       onCreated(deal);
       onClose();
     } catch (err) {
@@ -64,8 +62,8 @@ export default function NewDealModal({ onClose, onCreated, brands = [] }) {
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <div className="modal-title">✨ New Deal</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Add a new sponsorship or collab</div>
+            <div className="modal-title">New deal</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }}>Add a sponsorship or collaboration</div>
           </div>
           <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={18} /></button>
         </div>

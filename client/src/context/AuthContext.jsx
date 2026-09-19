@@ -1,92 +1,81 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+/**
+ * Auth context — zustand-backed; keeps the existing useAuth() contract.
+ * The persisted token is validated against /auth/me on boot; an offline
+ * device trusts its persisted session until connectivity returns.
+ */
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { authApi } from '../lib/api';
+import { useAuthStore } from '../stores/authStore';
+import { queryClient } from '../lib/queryClient';
+
+const API = '/api/v1';
 
 const AuthContext = createContext(null);
 
-const API = '/api';
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('collabio_token'));
-  const [loading, setLoading] = useState(true);
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+  const status = useAuthStore((s) => s.status);
+  const setSession = useAuthStore((s) => s.setSession);
+  const clearSession = useAuthStore((s) => s.clearSession);
+  const setStatus = useAuthStore((s) => s.setStatus);
+  const [loading, setLoading] = useState(Boolean(token));
 
+  // Validate the persisted token once per session.
   useEffect(() => {
-    if (token) {
-      fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => {
-          if (r.ok) return r.json();
-          // Invalidate stale or invalid token
-          localStorage.removeItem('collabio_token');
-          setToken(null);
-          return null;
-        })
-        .then(u => {
-          setUser(u);
-          setLoading(false);
-        })
-        .catch(() => {
-          setLoading(false);
-        });
-    } else {
+    if (!token) {
+      if (status !== 'anonymous') setStatus('anonymous');
       setLoading(false);
+      return;
     }
+    if (user) { setLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+        const payload = await res.json();
+        if (cancelled) return;
+        if (res.ok && payload?.data) setSession(token, payload.data);
+        else clearSession();
+      } catch {
+        // Offline — trust the persisted session until connectivity returns.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [token]);
 
-  const login = useCallback(async (email, password, remember = true) => {
-    const r = await fetch(`${API}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Login failed');
-    
-    localStorage.setItem('collabio_token', data.token);
-    if (remember) {
-      localStorage.setItem('collabio_remembered_email', email);
-    } else {
-      localStorage.removeItem('collabio_remembered_email');
+  const login = async (email, password) => {
+    const { token: t, user: u } = await authApi.login(email, password);
+    setSession(t, u);
+    queryClient.clear();
+    return u;
+  };
+
+  const loginAsDemo = async () => {
+    const { token: t, user: u } = await authApi.demo();
+    setSession(t, u);
+    queryClient.clear();
+    return u;
+  };
+
+  const register = async (username, email, password, display_name) => {
+    const { token: t, user: u } = await authApi.register({ username, email, password, display_name });
+    setSession(t, u);
+    queryClient.clear();
+    return u;
+  };
+
+  const logout = async () => {
+    try {
+      // Server-side logout revokes ALL issued tokens (token_version bump).
+      await fetch(`${API}/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    } finally {
+      clearSession();
+      queryClient.clear();
     }
-
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
-  }, []);
-
-  const loginAsDemo = useCallback(async () => {
-    const r = await fetch(`${API}/auth/demo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Demo login failed');
-
-    localStorage.setItem('collabio_token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
-  }, []);
-
-  const register = useCallback(async (username, email, password, display_name) => {
-    const r = await fetch(`${API}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password, display_name }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Registration failed');
-
-    localStorage.setItem('collabio_token', data.token);
-    localStorage.setItem('collabio_remembered_email', email);
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('collabio_token');
-    setToken(null);
-    setUser(null);
-  }, []);
+  };
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, loginAsDemo, register, logout }}>

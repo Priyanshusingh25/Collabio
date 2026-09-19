@@ -45,7 +45,7 @@ export default function Settings() {
     setSaving(true);
     try {
       await settingsApi.update(token, form);
-      addToast('Profile & business settings saved! ✨');
+      addToast('Settings saved');
     } catch (err) {
       addToast(err.message, 'error');
     } finally {
@@ -67,7 +67,7 @@ export default function Settings() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      addToast('Workspace data snapshot exported! 💾');
+      addToast('Workspace backup exported');
     } catch (err) {
       addToast(err.message || 'Export failed', 'error');
     } finally {
@@ -89,73 +89,63 @@ export default function Settings() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span>Settings & Diagnostics</span>
-            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: 'rgba(139, 92, 246, 0.12)', color: '#c084fc', padding: '3px 10px', borderRadius: 20 }}>
-              System Health 100%
-            </span>
+            <span>Settings</span>
           </h1>
-          <p className="page-subtitle">Configure creator branding, inspect cryptographic security posture, and manage local backups</p>
+          <p className="page-subtitle">Profile, security, and backups</p>
         </div>
         <button
           className="btn btn-secondary"
           onClick={handleExportData}
           disabled={exporting}
-          title="Download complete JSON snapshot of all your deals, brands, contacts, and invoices"
+          title="Download a JSON backup of your workspace"
         >
           {exporting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Download size={15} />}
-          Export Workspace (JSON)
+          Export data
         </button>
       </div>
 
-      <div style={{ maxWidth: 940, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ maxWidth: 880, display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* User Profile Card */}
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <div className="user-avatar" style={{ width: 68, height: 68, fontSize: 34 }}>
-              {user?.avatar_emoji || '🎬'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div className="user-avatar" style={{ width: 52, height: 52, fontSize: 20 }}>
+              {(user?.display_name || user?.username || 'C').charAt(0).toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em' }}>
                 {user?.display_name || user?.username}
               </div>
               <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{user?.email}</div>
-              <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', background: 'var(--color-surface-2)', borderRadius: 8, fontSize: 11.5, color: 'var(--text-muted)' }}>
-                <span>User ID: #{user?.id}</span>
-                <span>•</span>
-                <span>Handle: @{user?.username}</span>
-                <span>•</span>
-                <span style={{ color: '#10b981' }}>Creator Pro Plan</span>
-              </div>
             </div>
             <button
               className="btn btn-secondary btn-sm"
               onClick={loadData}
-              title="Refresh diagnostics"
+              title="Refresh status"
             >
-              <RefreshCw size={14} /> Refresh Status
+              <RefreshCw size={14} /> Refresh
             </button>
           </div>
         </div>
 
-        {/* Enterprise Security Architecture Card */}
-        <div className="card" style={{ border: '1px solid rgba(139, 92, 246, 0.35)', background: 'linear-gradient(135deg, rgba(14, 16, 27, 0.95) 0%, rgba(20, 24, 40, 0.8) 100%)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ padding: 10, background: 'rgba(139, 92, 246, 0.15)', borderRadius: 10, color: 'var(--accent-1)' }}>
-                <ShieldCheck size={22} />
+        {/* Security Card */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ padding: 9, background: 'var(--accent-1-soft)', border: '1px solid var(--accent-1-border)', borderRadius: 9, color: 'var(--accent-1)', display: 'flex' }}>
+                <ShieldCheck size={19} />
               </div>
               <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800 }}>
-                  Security & Hardening Posture
+                <div style={{ fontSize: 15, fontWeight: 700 }}>
+                  Security
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  Active cryptographic safeguards and defensive middleware
+                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                  Authentication and request protection
                 </div>
               </div>
             </div>
-            <div className="live-pill" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+            <div className="live-pill">
               <div className="db-beacon" />
-              <span>Posture: Hardened</span>
+              <span>Active</span>
             </div>
           </div>
 
@@ -201,40 +191,38 @@ export default function Settings() {
           </div>
 
           <div style={{
-            padding: '12px 16px',
-            background: 'rgba(139, 92, 246, 0.08)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
-            borderRadius: 10,
-            fontSize: 12,
+            padding: '12px 14px',
+            background: 'var(--color-surface-2)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 8,
+            fontSize: 12.5,
             color: 'var(--text-secondary)',
             lineHeight: 1.6
           }}>
-            <span style={{ fontWeight: 700, color: 'var(--accent-1)' }}>Defensive HTTP Headers Enforced:</span>{' '}
-            <code style={{ fontSize: 11, color: '#ffffff' }}>X-Content-Type-Options: nosniff</code>,{' '}
-            <code style={{ fontSize: 11, color: '#ffffff' }}>X-Frame-Options: DENY</code>,{' '}
-            <code style={{ fontSize: 11, color: '#ffffff' }}>X-XSS-Protection</code>, and strict origin CORS isolation. All SQL queries use parameterized bindings to ensure 100% immunity to SQL injection.
+            <span style={{ fontWeight: 650, color: 'var(--text-primary)' }}>Request protection enabled:</span>{' '}
+            Security headers, CORS isolation, rate limiting, and parameterized queries.
           </div>
         </div>
 
-        {/* Database & Storage Architecture */}
+        {/* Database */}
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ padding: 10, background: 'rgba(16, 185, 129, 0.12)', borderRadius: 10, color: '#10b981' }}>
-                <Database size={22} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ padding: 9, background: '#ecfdf3', border: '1px solid #a6f4c5', borderRadius: 9, color: '#027a48', display: 'flex' }}>
+                <Database size={19} />
               </div>
               <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800 }}>
-                  Database Engine & Disk Persistence
+                <div style={{ fontSize: 15, fontWeight: 700 }}>
+                  Database
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  Local ACID-compliant SQL engine diagnostics
+                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                  Local storage status
                 </div>
               </div>
             </div>
             <div className="live-pill">
               <div className="db-beacon" />
-              <span>WAL Connected</span>
+              <span>Connected</span>
             </div>
           </div>
 

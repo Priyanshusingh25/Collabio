@@ -43,12 +43,12 @@ export default function Services() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span>Rate Card & Services</span>
-            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: 'rgba(139, 92, 246, 0.12)', color: '#c084fc', padding: '3px 10px', borderRadius: 20 }}>
-              {services.length} Packages
+            <span>Services</span>
+            <span className="badge" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--text-secondary)' }}>
+              {services.length} total
             </span>
           </h1>
-          <p className="page-subtitle">Standardized sponsorship deliverables, pricing tiers, and platform rate packages</p>
+          <p className="page-subtitle">Deliverables and pricing</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setEditItem(null); setShowModal(true); }}>
           <Plus size={16} /> Add Package
@@ -61,11 +61,11 @@ export default function Services() {
         </div>
       ) : services.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">💼</div>
-          <div className="empty-state-title">No service packages configured</div>
-          <div className="empty-state-text">Define your brand integrations, dedicated video pricing, or consulting rates.</div>
+          <div style={{ color: 'var(--text-muted)' }}><Briefcase size={30} /></div>
+          <h3>No services yet</h3>
+          <p>Define deliverables and rates to reuse in deals.</p>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            <Plus size={15} /> Create Package
+            <Plus size={15} /> Add service
           </button>
         </div>
       ) : (
@@ -78,15 +78,7 @@ export default function Services() {
                 position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'var(--transition-spring)'
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
-                e.currentTarget.style.transform = 'translateY(-3px)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--color-border)';
-                e.currentTarget.style.transform = 'none';
+                transition: 'var(--transition-fast)'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>

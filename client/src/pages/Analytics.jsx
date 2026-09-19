@@ -3,27 +3,26 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, Legend
 } from 'recharts';
-import { BarChart3, TrendingUp, DollarSign, Calendar, Zap, PieChart } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Calendar } from 'lucide-react';
 import { statsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, getPlatform, getStatus } from '../utils/helpers';
 
-const COLORS = ['#8b5cf6', '#06b6d4', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
+const COLORS = ['#4f46e5', '#0ea5e9', '#059669', '#d97706', '#dc2626', '#7c3aed'];
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
     return (
       <div style={{
-        background: 'rgba(20, 23, 38, 0.95)',
-        backdropFilter: 'blur(16px)',
-        border: '1px solid rgba(139, 92, 246, 0.35)',
-        borderRadius: 10,
+        background: '#101828',
+        border: '1px solid #232b3a',
+        borderRadius: 8,
         padding: '10px 14px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+        boxShadow: '0 8px 24px rgba(16,24,40,0.25)'
       }}>
-        <div style={{ color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
+        <div style={{ color: '#98a2b3', fontSize: 11, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
         {payload.map((p, i) => (
-          <div key={i} style={{ color: p.color || '#ffffff', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: 15 }}>
+          <div key={i} style={{ color: '#fff', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>
             {typeof p.value === 'number' && p.value > 100 ? formatCurrency(p.value) : p.value}
           </div>
         ))}
@@ -75,27 +74,26 @@ export default function Analytics() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span>Creator Analytics</span>
-            <span style={{ fontSize: 18, color: 'var(--accent-1)' }}>📈</span>
+            <span>Analytics</span>
           </h1>
-          <p className="page-subtitle">Deep intelligence into your sponsorship earnings, platform distribution, and deal conversion rates</p>
+          <p className="page-subtitle">Earnings, platform mix, and conversion by stage</p>
         </div>
       </div>
 
       {/* Top Stat Metrics */}
       <div className="grid-4 mb-8">
         {[
-          { label: 'Total Earned', value: formatCurrency(stats?.totalEarned), sub: 'All-time payouts', icon: DollarSign, color: '#10b981' },
-          { label: 'This Year (2026)', value: formatCurrency(stats?.thisYear), sub: 'Annual trajectory', icon: Calendar, color: '#8b5cf6' },
-          { label: 'Current Month', value: formatCurrency(stats?.thisMonth), sub: 'Monthly recurring', icon: Zap, color: '#06b6d4' },
-          { label: 'Pipeline Value', value: formatCurrency(stats?.pipelineValue), sub: 'Active integrations', icon: TrendingUp, color: '#ec4899' },
+          { label: 'Total Earned', value: formatCurrency(stats?.totalEarned), sub: 'All-time payouts', icon: DollarSign },
+          { label: 'This Year', value: formatCurrency(stats?.thisYear), sub: 'Annual total', icon: Calendar },
+          { label: 'Current Month', value: formatCurrency(stats?.thisMonth), sub: 'Month to date', icon: TrendingUp },
+          { label: 'Pipeline Value', value: formatCurrency(stats?.pipelineValue), sub: 'Active deals', icon: BarChart3 },
         ].map(s => {
           const Icon = s.icon;
           return (
             <div key={s.label} className="stat-card">
-              <div className="stat-icon" style={{ color: s.color }}><Icon size={22} /></div>
+              <div className="stat-icon"><Icon size={19} /></div>
               <div className="stat-label">{s.label}</div>
-              <div className="stat-value accent" style={{ fontSize: 26 }}>{s.value}</div>
+              <div className="stat-value" style={{ fontSize: 24 }}>{s.value}</div>
               <div className="stat-change">{s.sub}</div>
             </div>
           );
@@ -107,23 +105,23 @@ export default function Analytics() {
         {/* Revenue Over Time */}
         <div className="chart-card">
           <div className="chart-title">
-            <TrendingUp size={16} color="var(--accent-1)" />
-            <span>Revenue Growth Over Time</span>
+            <TrendingUp size={16} />
+            <span>Revenue over time</span>
           </div>
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={monthlyData} margin={{ top: 10, right: 10, bottom: 5, left: -15 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-                <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="month" tick={{ fill: '#667085', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#667085', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="earned" 
-                  stroke="#a855f7" 
-                  strokeWidth={3} 
-                  dot={{ fill: '#8b5cf6', strokeWidth: 2, stroke: '#ffffff', r: 4 }} 
-                  activeDot={{ r: 7, fill: '#ec4899', stroke: '#ffffff', strokeWidth: 3 }} 
+                <Line
+                  type="monotone"
+                  dataKey="earned"
+                  stroke="#4f46e5"
+                  strokeWidth={2.5}
+                  dot={{ fill: '#4f46e5', strokeWidth: 2, stroke: '#ffffff', r: 3 }}
+                  activeDot={{ r: 5, fill: '#4f46e5', stroke: '#ffffff', strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -133,16 +131,16 @@ export default function Analytics() {
         {/* Value by Platform */}
         <div className="chart-card">
           <div className="chart-title">
-            <BarChart3 size={16} color="#06b6d4" />
-            <span>Value by Content Platform</span>
+            <BarChart3 size={16} />
+            <span>Value by platform</span>
           </div>
           {platformValueData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={platformValueData} margin={{ top: 10, right: 10, bottom: 5, left: -15 }}>
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+                <XAxis dataKey="name" tick={{ fill: '#667085', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#667085', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="#8b5cf6" />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="#4f46e5" />
               </BarChart>
             </ResponsiveContainer>
           ) : <EmptyChart />}
@@ -152,8 +150,8 @@ export default function Analytics() {
       {/* Pipeline Breakdown Table */}
       <div className="chart-card">
         <div className="chart-title">
-          <Zap size={16} color="var(--accent-1)" />
-          <span>Deal Pipeline Stage Conversion Breakdown</span>
+          <BarChart3 size={16} />
+          <span>Pipeline by stage</span>
         </div>
         <div className="table-wrap" style={{ marginTop: 16 }}>
           <table className="table">
@@ -175,14 +173,14 @@ export default function Analytics() {
                   <tr key={s.name}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>{st.emoji}</span>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: st.color, display: 'inline-block' }} />
                         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{s.name}</span>
                       </div>
                     </td>
-                    <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                    <td style={{ fontWeight: 650, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
                       {s.count} deal{s.count !== 1 ? 's' : ''}
                     </td>
-                    <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: st.color }}>
+                    <td style={{ fontWeight: 650, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
                       {formatCurrency(s.value)}
                     </td>
                     <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
@@ -194,7 +192,7 @@ export default function Analytics() {
                           <div style={{
                             width: `${pct}%`,
                             height: '100%',
-                            background: 'var(--accent-gradient)',
+                            background: st.color,
                             borderRadius: 99
                           }} />
                         </div>

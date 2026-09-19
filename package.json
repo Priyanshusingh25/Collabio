@@ -6,16 +6,31 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node --watch server/index.js",
     "client": "npm --prefix client run dev",
-    "install:all": "npm install && npm --prefix client install"
+    "start": "node server/index.js",
+    "build": "npm --prefix client run build",
+    "install:all": "npm install && npm --prefix client install",
+    "lint": "eslint . --quiet",
+    "lint:report": "eslint . --format stylish",
+    "test": "npm run test:unit && npm run test:smoke",
+    "test:unit": "node --test \"server/tests/unit/*.test.js\"",
+    "test:smoke": "node server/tests/smoke.js",
+    "db:migrate": "node server/src/database/cli.js migrate",
+    "db:seed": "node server/src/database/cli.js seed",
+    "db:status": "node server/src/database/cli.js status",
+    "db:reset": "node server/src/database/cli.js reset"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "sqlite3": "^5.1.7",
     "cors": "^2.8.5",
+    "dotenv": "^18.0.0",
     "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.21.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "eslint": "^9.39.5"
   }
 }

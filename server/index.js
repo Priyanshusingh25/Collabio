@@ -1,138 +1,140 @@
+/**
+ * Collabio API — application entry point.
+ * Layering: routes (controllers) -> services -> database (repository layer).
+ * Configuration, logging, auth, validation, rate limiting and realtime
+ * are all wired here.
+ */
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
-const { initializeDatabase } = require('./db/database');
-const { router: authRouter } = require('./routes/auth');
-const dealsRouter = require('./routes/deals');
-const brandsRouter = require('./routes/brands');
-const statsRouter = require('./routes/stats');
-const servicesRouter = require('./routes/services');
-const contactsRouter = require('./routes/contacts');
-const invoicesRouter = require('./routes/invoices');
-const notesRouter = require('./routes/notes');
-const settingsRouter = require('./routes/settings');
+const env = require('./src/config/env');
+const { open } = require('./src/database/db');
+const { createBaseTables } = require('./src/database/schema');
+const { runMigrations } = require('./src/database/migrations');
+const { seedDemoUserIfMissing } = require('./src/database/seed');
+const { rateLimit } = require('./src/middleware/rateLimit');
+const { requestLogger } = require('./src/middleware/requestLogger');
+const { errorHandler } = require('./src/middleware/errorHandler');
+const { initWebsocket } = require('./src/websocket');
+const jobs = require('./src/services/jobsService');
+const logger = require('./src/utils/logger');
 
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-// Security Middleware: Hardening HTTP response headers
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  next();
+const apiLimiter = rateLimit({
+  name: 'api',
+  windowMs: env.rateLimit.windowMs,
+  max: env.rateLimit.apiMax,
+  keyFn: (req) => `${req.ip}:${req.userId || 'anon'}`,
+});
+const authLimiter = rateLimit({
+  name: 'auth',
+  windowMs: env.rateLimit.windowMs,
+  max: env.rateLimit.authMax,
+  keyFn: (req) => req.ip || 'unknown',
 });
 
-// Security Rate Limiting (In-Memory sliding window for Auth endpoints)
-const authAttempts = new Map();
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 mins
-const MAX_AUTH_ATTEMPTS = 50;
+function createApp() {
+  const app = express();
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
 
-function authRateLimiter(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress || 'unknown';
-  const now = Date.now();
-  const userRecord = authAttempts.get(ip) || { count: 0, firstAttempt: now };
+  // Security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (env.isProd) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
 
-  if (now - userRecord.firstAttempt > RATE_LIMIT_WINDOW_MS) {
-    userRecord.count = 1;
-    userRecord.firstAttempt = now;
-  } else {
-    userRecord.count += 1;
+  app.use(cors({
+    origin: [env.clientUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    credentials: true,
+  }));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(requestLogger);
+
+  // Global API rate limit (auth endpoints get a stricter one below).
+  app.use('/api', apiLimiter);
+
+  // ---- versioned routes ----
+  const v1 = express.Router();
+  v1.use('/auth', authLimiter, require('./src/routes/v1/auth.routes'));
+  v1.use('/deals', require('./src/routes/v1/deals.routes'));
+  v1.use('/brands', require('./src/routes/v1/brands.routes'));
+  v1.use('/contacts', require('./src/routes/v1/contacts.routes'));
+  v1.use('/invoices', require('./src/routes/v1/invoices.routes'));
+  v1.use('/services', require('./src/routes/v1/services.routes'));
+  v1.use('/notes', require('./src/routes/v1/notes.routes'));
+  v1.use('/tasks', require('./src/routes/v1/tasks.routes'));
+  v1.use('/communications', require('./src/routes/v1/communications.routes'));
+  v1.use('/templates', require('./src/routes/v1/templates.routes'));
+  v1.use('/notifications', require('./src/routes/v1/notifications.routes'));
+  v1.use('/activity', require('./src/routes/v1/activity.routes'));
+  v1.use('/search', require('./src/routes/v1/search.routes'));
+  v1.use('/stats', require('./src/routes/v1/stats.routes'));
+  v1.use('/preferences', require('./src/routes/v1/preferences.routes'));
+  v1.use('/workspace', require('./src/routes/v1/workspace.routes'));
+  v1.use('/health', require('./src/routes/v1/health.routes'));
+  app.use('/api/v1', v1);
+
+  // Legacy compatibility: existing clients calling /api/* get the same routers.
+  app.use('/api/auth', authLimiter, require('./src/routes/v1/auth.routes'));
+  for (const [prefix, file] of [
+    ['/deals', 'deals'], ['/brands', 'brands'], ['/contacts', 'contacts'],
+    ['/invoices', 'invoices'], ['/services', 'services'], ['/notes', 'notes'],
+    ['/tasks', 'tasks'], ['/communications', 'communications'], ['/templates', 'templates'],
+    ['/notifications', 'notifications'], ['/activity', 'activity'], ['/search', 'search'],
+    ['/stats', 'stats'], ['/preferences', 'preferences'], ['/workspace', 'workspace'],
+  ]) {
+    app.use(`/api${prefix}`, require(`./src/routes/v1/${file}.routes`));
   }
-  authAttempts.set(ip, userRecord);
+  app.use('/api/health', require('./src/routes/v1/health.routes'));
 
-  if (userRecord.count > MAX_AUTH_ATTEMPTS) {
-    const retryAfterSeconds = Math.ceil((userRecord.firstAttempt + RATE_LIMIT_WINDOW_MS - now) / 1000);
-    res.setHeader('Retry-After', retryAfterSeconds);
-    return res.status(429).json({
-      error: 'Too many authentication attempts. Please try again later for security reasons.',
-      retryAfterSeconds
-    });
-  }
-  next();
+  // 404
+  app.use((req, res) => {
+    res.status(404).json({ success: false, error: { code: 'ROUTE_NOT_FOUND', message: 'Route not found' } });
+  });
+
+  app.use(errorHandler);
+  return app;
 }
 
-// Middleware
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+async function start() {
+  logger.info('server:starting', { env: env.env, port: env.port });
+  open();
+  await createBaseTables();
+  await runMigrations();
+  await seedDemoUserIfMissing();
 
-// Routes with security hardening
-app.use('/api/auth', authRateLimiter, authRouter);
-app.use('/api/deals', dealsRouter);
-app.use('/api/brands', brandsRouter);
-app.use('/api/stats', statsRouter);
-app.use('/api/services', servicesRouter);
-app.use('/api/contacts', contactsRouter);
-app.use('/api/invoices', invoicesRouter);
-app.use('/api/notes', notesRouter);
-app.use('/api/settings', settingsRouter);
+  const app = createApp();
+  const server = http.createServer(app);
+  initWebsocket(server);
 
-// Health check & System Diagnostics
-app.get('/api/health', async (req, res) => {
-  try {
-    const { get } = require('./db/database');
-    const userCount = await get('SELECT COUNT(*) as count FROM users');
-    const dealCount = await get('SELECT COUNT(*) as count FROM deals');
-    const brandCount = await get('SELECT COUNT(*) as count FROM brands');
-    const invoiceCount = await get('SELECT COUNT(*) as count FROM invoices');
+  jobs.startScheduler();
 
-    res.json({
-      status: 'ok',
-      app: 'Collabio API',
-      version: '1.0.0',
-      database: {
-        engine: 'SQLite 3',
-        mode: 'WAL (Write-Ahead Logging)',
-        status: 'connected',
-        file: 'server/db/collabio.db',
-        persistent: true,
-        counts: {
-          users: userCount?.count || 0,
-          deals: dealCount?.count || 0,
-          brands: brandCount?.count || 0,
-          invoices: invoiceCount?.count || 0,
-        }
-      },
-      security: {
-        headersEnforced: true,
-        rateLimiterActive: true,
-        sqlInjectionProtection: 'Parameterized Statements',
-        passwordHashing: 'bcrypt (10 rounds)',
-        tokenVerification: 'HMAC-SHA256 JWT'
-      },
-      uptime: Math.floor(process.uptime()),
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: err.message });
-  }
-});
+  server.listen(env.port, () => {
+    logger.info('server:listening', { url: `http://localhost:${env.port}`, api: '/api/v1', ws: '/ws' });
+  });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
+  // Graceful shutdown
+  const shutdown = (signal) => {
+    logger.info('server:shutdown', { signal });
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 5000).unref();
+  };
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+}
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-// Start server after DB init if executed directly
 if (require.main === module) {
-  initializeDatabase()
-    .then(() => {
-      app.listen(PORT, () => {
-        console.log(`🚀 Collabio API running at http://localhost:${PORT}`);
-      });
-    })
-    .catch((err) => {
-      console.error('Failed to initialize database:', err);
-      process.exit(1);
-    });
+  start().catch((err) => {
+    logger.error('server:failed_to_start', { error: err.message, stack: err.stack?.split('\n').slice(0, 4).join('\n') });
+    process.exit(1);
+  });
 }
 
-module.exports = app;
+module.exports = { createApp, start };

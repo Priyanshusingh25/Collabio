@@ -65,12 +65,12 @@ export default function Invoices() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            <span>Invoices & Billing</span>
-            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: 'rgba(168, 85, 247, 0.12)', color: '#c084fc', padding: '3px 10px', borderRadius: 20 }}>
-              {formatCurrency(totalPending)} Pending
+            <span>Invoices</span>
+            <span className="badge" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--text-secondary)' }}>
+              {formatCurrency(totalPending)} outstanding
             </span>
           </h1>
-          <p className="page-subtitle">Generate branded creator invoices, track wire settlements, and print client PDF receipts</p>
+          <p className="page-subtitle">Create invoices and track payments</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setSelectedInvoice(null); setShowModal(true); }}>
           <Plus size={16} /> New Invoice
